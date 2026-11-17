@@ -1,0 +1,905 @@
+<?php
+
+use App\Enums\PermissionEnum;
+use App\Http\Controllers\Admin\ClubController as AdminClubController;
+use App\Http\Controllers\Admin\CommunityEventController;
+use App\Http\Controllers\Admin\CommunityPostController;
+use App\Http\Controllers\Admin\CommunitySessionController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DressingItemController;
+use App\Http\Controllers\Admin\FaqController;
+use App\Http\Controllers\Admin\HeritageLetterController;
+use App\Http\Controllers\Admin\HomeHeroController;
+use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
+use App\Http\Controllers\Admin\JournalArticleController;
+use App\Http\Controllers\Admin\LegalPageController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\NotificationTestController;
+use App\Http\Controllers\Admin\OpeningOfferController;
+use App\Http\Controllers\Admin\OpsController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\RealtimeController;
+use App\Http\Controllers\Admin\ReturnController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SeoMetaController;
+use App\Http\Controllers\Admin\SessionChatController as AdminSessionChatController;
+use App\Http\Controllers\Admin\SiteSettingController;
+use App\Http\Controllers\Admin\StorefrontAccessController;
+use App\Http\Controllers\Admin\StoryPageController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\AuthModalRedirectController;
+use App\Http\Controllers\Auth\PasswordResetOtpController;
+use App\Http\Controllers\Auth\RememberIntendedUrlController;
+use App\Http\Controllers\Community\ClubController;
+use App\Http\Controllers\Community\CommunityController;
+use App\Http\Controllers\Community\EventController as CommunityEventPageController;
+use App\Http\Controllers\Community\SessionController;
+use App\Http\Controllers\Community\SessionScoreController;
+use App\Http\Controllers\CookieConsentController;
+use App\Http\Controllers\FileUploadDemoController;
+use App\Http\Controllers\Maison\CheckoutController;
+use App\Http\Controllers\Maison\FoundingCircleRegisterController;
+use App\Http\Controllers\Maison\GuestOrderReturnController;
+use App\Http\Controllers\Maison\GuestReturnLinkRequestController;
+use App\Http\Controllers\Maison\InquiryController;
+use App\Http\Controllers\Maison\NewsletterController;
+use App\Http\Controllers\Maison\ProductEditionController;
+use App\Http\Controllers\Maison\ReturnsPageController;
+use App\Http\Controllers\Maison\SessionShareController;
+use App\Http\Controllers\Maison\VerificationController;
+use App\Http\Controllers\MaisonController;
+use App\Http\Controllers\Member\DashboardController;
+use App\Http\Controllers\Member\NotificationController;
+use App\Http\Controllers\Member\OrderCancelController;
+use App\Http\Controllers\Member\OrderReturnController;
+use App\Http\Controllers\Member\PassportPdfController;
+use App\Http\Controllers\Member\PresenceController;
+use App\Http\Controllers\Member\RegisterListingController;
+use App\Http\Controllers\Member\SessionChatController;
+use App\Http\Controllers\PostAttachmentController;
+use App\Http\Controllers\RobotsTxtController;
+use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\SitemapController;
+use App\Models\User;
+use App\Services\Auth\PostLoginRedirectService;
+use App\Services\Locale\LocalePreferenceService;
+use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+/*
+ * The public site is locale-prefixed. Bare `/` negotiates cookie → session →
+ * Accept-Language → default so returning visitors keep their language choice.
+ */
+
+Route::get('/', function (Request $request, LocalePreferenceService $locales) {
+    $locale = $locales->preferred($request);
+    $locales->remember($request, $locale);
+
+    return redirect('/'.$locale);
+})->name('home');
+
+Route::get('robots.txt', RobotsTxtController::class)->name('robots');
+Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
+
+Route::post('cookie-consent', [CookieConsentController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('cookie-consent.store');
+
+Route::post('auth/intended', [RememberIntendedUrlController::class, 'store'])
+    ->middleware('throttle:60,1')
+    ->name('auth.intended');
+
+Route::middleware('web')->controller(AuthModalRedirectController::class)->group(function () {
+    Route::get('login', 'login')->name('login');
+    Route::get('register', 'register')->name('register');
+    Route::get('forgot-password', 'forgotPassword')->name('password.request');
+    Route::get('two-factor-challenge', 'twoFactor')->name('two-factor.login');
+});
+
+Route::middleware(['web', 'guest'])->group(function () {
+    Route::post('forgot-password', [PasswordResetOtpController::class, 'send'])
+        ->middleware('throttle:password-reset-send')
+        ->name('password.email');
+    Route::post('reset-password', [PasswordResetOtpController::class, 'reset'])
+        ->middleware('throttle:password-reset-attempt')
+        ->name('password.update');
+});
+
+Route::pattern('locale', implode('|', config('maison.locales')));
+
+/*
+ * The 14 public pages. Slugs are canonical rather than translated, so the same
+ * path resolves under every locale prefix.
+ */
+Route::prefix('{locale}')
+    ->middleware('locale')
+    ->name('maison.')
+    ->group(function () {
+        Route::controller(MaisonController::class)->group(function () {
+            Route::get('/', 'home')->name('home');
+            Route::get('huis', 'house')->name('house');
+            Route::get('products', 'products')->name('products');
+            Route::get('products/{product:slug}', 'productShow')->name('products.show');
+            Route::get('story', 'story')->name('story');
+            Route::get('circle', 'circle')->name('circle');
+            Route::get('dressing', 'dressing')->name('dressing');
+            Route::get('dressing/{dressingItem:slug}', 'dressingShow')->name('dressing.show');
+            Route::get('journal', 'journal')->name('journal');
+            Route::get('journal/{slug}', 'journalShow')
+                ->where('slug', '[a-z0-9-]+')
+                ->name('journal.show');
+            Route::get('community', 'community')->name('community');
+            Route::get('corner', 'corner')->name('corner');
+            Route::get('contact', 'contact')->name('contact');
+            Route::get('privacy', 'privacy')->name('privacy');
+            Route::get('terms', 'terms')->name('terms');
+            Route::get('withdrawal', 'withdrawal')->name('withdrawal');
+            Route::get('shipping', 'shipping')->name('shipping');
+            Route::get('care', 'care')->name('care');
+        });
+
+        Route::get('returns', ReturnsPageController::class)
+            ->name('returns');
+        Route::post('returns/guest-link', GuestReturnLinkRequestController::class)
+            ->middleware('throttle:5,60')
+            ->name('returns.guest-link');
+        Route::get('retour', fn (string $locale) => redirect()->route('maison.returns', ['locale' => $locale]))
+            ->name('returns.retour');
+        Route::get('retours', fn (string $locale) => redirect()->route('maison.returns', ['locale' => $locale]))
+            ->name('returns.retours');
+
+        Route::controller(GuestOrderReturnController::class)
+            ->prefix('guest-returns')
+            ->name('guest-returns.')
+            ->middleware('throttle:20,1')
+            ->group(function () {
+                Route::get('orders/{order}/create', 'create')
+                    ->middleware('signed')
+                    ->name('create');
+                Route::post('orders/{order}', 'store')
+                    ->name('store');
+                Route::get('{orderReturn}', 'show')
+                    ->middleware('signed')
+                    ->name('show');
+                Route::patch('{orderReturn}/tracking', 'tracking')
+                    ->middleware('signed')
+                    ->name('tracking');
+            });
+
+        Route::get('founding-circle/register', FoundingCircleRegisterController::class)->name('register');
+
+        Route::get('products/{product:slug}/editions', [ProductEditionController::class, 'index'])
+            ->name('products.editions');
+        Route::post('products/{product:slug}/editions/{editionPiece}/hold', [ProductEditionController::class, 'hold'])
+            ->middleware(['auth', 'customer', 'throttle:10,1'])
+            ->name('products.editions.hold');
+
+        Route::controller(InquiryController::class)->group(function () {
+            Route::post('contact', 'storeContact')
+                ->middleware('throttle:5,1')
+                ->name('contact.store');
+            Route::post('corner/inquire', 'storeCorner')
+                ->middleware('throttle:5,1')
+                ->name('corner.inquire');
+        });
+
+        Route::get('verify/{token}', VerificationController::class)
+            ->where('token', '[0-9a-fA-F-]{36}')
+            ->name('verify');
+
+        Route::controller(SessionShareController::class)
+            ->where(['shareToken' => '[A-Za-z0-9]{32}'])
+            ->middleware('throttle:60,1')
+            ->group(function () {
+                Route::get('s/{shareToken}', 'show')->name('sessions.share');
+                Route::get('s/{shareToken}/card/{format}.png', 'card')
+                    ->where('format', 'story|post')
+                    ->name('sessions.card');
+            });
+
+        Route::post('heritage-letter', [NewsletterController::class, 'store'])
+            ->middleware('throttle:5,1')
+            ->name('heritage-letter.store');
+        Route::get('heritage-letter/unsubscribe/{subscriber}', [NewsletterController::class, 'unsubscribe'])
+            ->middleware('signed')
+            ->name('heritage-letter.unsubscribe');
+
+        Route::controller(CheckoutController::class)->group(function () {
+            Route::post('checkout', 'store')
+                ->middleware(['auth', 'customer', 'throttle:10,1'])
+                ->name('checkout.store');
+            Route::get('checkout/success', 'success')->name('checkout.success');
+            Route::get('checkout/cancel', 'cancel')->name('checkout.cancel');
+        });
+    });
+
+/*
+ * Auth pages that need a locale prefix (password reset, verify, confirm).
+ * Public Maison pages live in the group above.
+ */
+Route::prefix('{locale}')
+    ->middleware('locale')
+    ->group(function () {
+        Route::get('reset-password', [PasswordResetOtpController::class, 'create'])
+            ->middleware('guest')
+            ->name('password.reset');
+
+        Route::get('email/verify', function (Request $request) {
+            $user = $request->user();
+
+            if ($user instanceof User && $user->hasVerifiedEmail()) {
+                return redirect()->to(
+                    app(PostLoginRedirectService::class)->intendedUrlFor($user, $request)
+                );
+            }
+
+            return Inertia::render('auth/verify-email', [
+                'status' => $request->session()->get('status'),
+            ]);
+        })->middleware('auth')->name('verification.notice');
+
+        Route::get('user/confirm-password', function (Request $request) {
+            $intended = $request->session()->get('url.intended', '');
+
+            if (is_string($intended) && str_contains($intended, '/member')) {
+                return Inertia::render('member/confirm-password');
+            }
+
+            return Inertia::render('auth/confirm-password');
+        })
+            ->middleware('auth')
+            ->name('password.confirm');
+    });
+
+Route::prefix('{locale}')
+    ->middleware(['locale', 'auth', 'verified'])
+    ->group(function () {
+        Route::get('dashboard', function (Request $request) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 403);
+
+            return redirect()->to(app(PostLoginRedirectService::class)->urlFor($user, $request));
+        });
+
+        Route::prefix('member')
+            ->name('member.')
+            ->middleware('customer')
+            ->controller(DashboardController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('dashboard');
+                Route::get('lidpaspoort', 'lidpaspoort')->name('lidpaspoort');
+                Route::get('heritage', 'heritage')->middleware('founding-circle')->name('heritage');
+                Route::get('orders', 'orders')->name('orders');
+                Route::get('orders/{order}', 'orderShow')->name('orders.show');
+                Route::post('orders/{order}/cancel', OrderCancelController::class)
+                    ->name('orders.cancel');
+                Route::get('orders/{order}/returns/create', [OrderReturnController::class, 'create'])
+                    ->name('orders.returns.create');
+                Route::post('orders/{order}/returns', [OrderReturnController::class, 'store'])
+                    ->name('orders.returns.store');
+                Route::get('returns/{orderReturn}', [OrderReturnController::class, 'show'])
+                    ->name('returns.show');
+                Route::patch('returns/{orderReturn}/tracking', [OrderReturnController::class, 'tracking'])
+                    ->name('returns.tracking');
+                Route::delete('returns/{orderReturn}', [OrderReturnController::class, 'destroy'])
+                    ->name('returns.destroy');
+                Route::get('passport', 'passport')->middleware('founding-circle')->name('passport');
+                Route::get('passport.pdf', PassportPdfController::class)->middleware('founding-circle')->name('passport.pdf');
+                Route::get('circle', 'circle')->middleware('founding-circle')->name('circle');
+                Route::get('register-listing', [RegisterListingController::class, 'edit'])
+                    ->middleware('founding-circle')
+                    ->name('register-listing');
+                Route::patch('register-listing', [RegisterListingController::class, 'update'])
+                    ->middleware('founding-circle')
+                    ->name('register-listing.update');
+                Route::get('letter', 'letter')->name('letter');
+                Route::get('email-preferences', 'emailPreferences')->name('email-preferences');
+                Route::patch('email-preferences', 'updateEmailPreferences')->name('email-preferences.update');
+                Route::patch('session-emails', 'updateSessionEmails')->name('session-emails.update');
+                Route::get('profile', 'profile')->name('profile');
+                Route::patch('profile', 'updateProfile')->name('profile.update');
+                Route::get('security', 'security')->name('security');
+                Route::delete('profile', 'destroy')->name('profile.destroy');
+                Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+                Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+                Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])
+                    ->whereNumber('notification')
+                    ->name('notifications.read');
+                Route::get('notifications/{userNotification}', [NotificationController::class, 'show'])
+                    ->whereNumber('userNotification')
+                    ->name('notifications.show');
+                Route::delete('notifications/{userNotification}', [NotificationController::class, 'destroy'])
+                    ->whereNumber('userNotification')
+                    ->name('notifications.destroy');
+                Route::post('presence', PresenceController::class)->name('presence');
+                Route::get('chat', [SessionChatController::class, 'index'])->name('chat.index');
+                Route::get('chat/{communitySession}', [SessionChatController::class, 'show'])
+                    ->name('chat.show');
+                Route::post('chat/{communitySession}/messages', [SessionChatController::class, 'store'])
+                    ->name('chat.messages.store');
+                Route::post('chat/{communitySession}/messages/{message}/report', [SessionChatController::class, 'report'])
+                    ->name('chat.messages.report');
+                Route::post('chat/{communitySession}/read', [SessionChatController::class, 'markRead'])
+                    ->name('chat.read');
+            });
+
+        Route::prefix('community')->name('community.')->group(function () {
+            Route::controller(CommunityController::class)->group(function () {
+                Route::post('posts', 'storePost')->name('posts.store');
+                Route::post('posts/{communityPost}/comments', 'storeComment')->name('posts.comments.store');
+                Route::post('posts/{communityPost}/like', 'toggleLike')->name('posts.like');
+                Route::post('posts/{communityPost}/hide', 'hidePost')->name('posts.hide');
+                Route::post('posts/{communityPost}/report', 'reportPost')->name('posts.report');
+                Route::post('events/{communityEvent}/rsvp', 'rsvpEvent')->name('events.rsvp');
+                Route::delete('events/{communityEvent}/rsvp', 'cancelRsvp')->name('events.rsvp.cancel');
+            });
+
+            Route::get('events', [CommunityEventPageController::class, 'index'])->name('events.index');
+
+            Route::controller(SessionController::class)->group(function () {
+                Route::get('sessions', 'index')->name('sessions.index');
+                Route::get('sessions/create', 'create')->name('sessions.create');
+                Route::post('sessions', 'store')->name('sessions.store');
+                Route::get('sessions/{communitySession}', 'show')->name('sessions.show');
+                Route::get('sessions/{communitySession}/chat', 'chat')->name('sessions.chat');
+                Route::delete('sessions/{communitySession}', 'destroy')->name('sessions.destroy');
+                Route::post('sessions/{communitySession}/join', 'join')->name('sessions.join');
+                Route::delete('sessions/{communitySession}/leave', 'leave')->name('sessions.leave');
+                Route::delete('sessions/{communitySession}/participants/{user}', 'removeParticipant')
+                    ->name('sessions.participants.destroy');
+                Route::patch('sessions/{communitySession}/requests/{user}/approve', 'approveRequest')
+                    ->name('sessions.requests.approve');
+                Route::patch('sessions/{communitySession}/requests/{user}/reject', 'rejectRequest')
+                    ->name('sessions.requests.reject');
+            });
+
+            Route::controller(SessionScoreController::class)->scopeBindings()->group(function () {
+                Route::post('sessions/{communitySession}/scores', 'store')->name('sessions.scores.store');
+                Route::patch('sessions/{communitySession}/scores/{score}/approve', 'approve')
+                    ->name('sessions.scores.approve');
+                Route::patch('sessions/{communitySession}/scores/{score}/reject', 'reject')
+                    ->name('sessions.scores.reject');
+                Route::patch('sessions/{communitySession}/scoreboard/lock', 'lock')->name('sessions.scoreboard.lock');
+                Route::patch('sessions/{communitySession}/scoreboard/unlock', 'unlock')->name('sessions.scoreboard.unlock');
+                Route::patch('sessions/{communitySession}/finish', 'finish')->name('sessions.finish');
+            });
+
+            Route::controller(ClubController::class)->group(function () {
+                Route::get('clubs', 'index')->name('clubs.index');
+                Route::get('clubs/search', 'search')->name('clubs.search');
+                Route::post('clubs', 'store')->name('clubs.store');
+                Route::get('clubs/{club}', 'show')->name('clubs.show');
+            });
+        });
+
+        // ── Demo landing page ─────────────────────────────────────────────────────
+        Route::get('/file-upload-demo', [FileUploadDemoController::class, 'index'])
+            ->name('file-upload-demo.index')->middleware('permission:'.PermissionEnum::FILE_UPLOAD_INDEX->value);
+
+        // ── Single / multiple file upload (used by demos 1 & 2) ──────────────────
+        Route::post('/upload', [FileUploadDemoController::class, 'store'])
+            ->name('upload.store')->middleware('permission:'.PermissionEnum::FILE_UPLOAD_STORE->value);
+
+        // ── Edit-mode endpoint (demo 3) ───────────────────────────────────────────
+        Route::post('/posts/{post}', [PostAttachmentController::class, 'update'])
+            ->name('posts.update')->middleware('permission:'.PermissionEnum::POSTS_EDIT->value);
+
+        // ── Admin: access management ──────────────────────────────────────────────
+        Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
+            Route::get('dashboard', AdminDashboardController::class)
+                ->name('dashboard')
+                ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+
+            Route::controller(CustomerController::class)->group(function () {
+                Route::get('customers', 'index')->name('customers.index')
+                    ->middleware('permission:'.PermissionEnum::USERS_INDEX->value);
+                Route::get('customers/search', 'search')->name('customers.search')
+                    ->middleware('permission:'.PermissionEnum::USERS_INDEX->value.'|'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('customers/create', 'create')->name('customers.create')
+                    ->middleware('permission:'.PermissionEnum::USERS_CREATE->value);
+                Route::post('customers', 'store')->name('customers.store')
+                    ->middleware(['permission:'.PermissionEnum::USERS_CREATE->value, HandlePrecognitiveRequests::class]);
+                Route::get('customers/{user}', 'show')->name('customers.show')
+                    ->middleware('permission:'.PermissionEnum::USERS_VIEW->value);
+                Route::get('customers/{user}/edit', 'edit')->name('customers.edit')
+                    ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
+                Route::put('customers/{user}', 'update')->name('customers.update')
+                    ->middleware(['permission:'.PermissionEnum::USERS_EDIT->value, HandlePrecognitiveRequests::class]);
+                Route::delete('customers/{user}', 'destroy')->name('customers.destroy')
+                    ->middleware('permission:'.PermissionEnum::USERS_DELETE->value);
+            });
+
+            Route::controller(OpsController::class)->group(function () {
+                Route::get('orders', 'orders')->name('orders.index')
+                    ->middleware('permission:'.PermissionEnum::ORDERS_MANAGE->value);
+                Route::get('orders/{order}', 'orderShow')->name('orders.show')
+                    ->middleware('permission:'.PermissionEnum::ORDERS_MANAGE->value);
+                Route::patch('orders/{order}', 'updateOrderStatus')->name('orders.update')
+                    ->middleware('permission:'.PermissionEnum::ORDERS_MANAGE->value);
+                Route::patch('orders/{order}/delivered-on', 'updateDeliveredOn')->name('orders.delivered-on')
+                    ->middleware('permission:'.PermissionEnum::ORDERS_MANAGE->value);
+                Route::get('returns', [ReturnController::class, 'index'])
+                    ->name('returns.index')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::get('returns/{orderReturn}', [ReturnController::class, 'show'])
+                    ->name('returns.show')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/receive', [ReturnController::class, 'markReceived'])
+                    ->name('returns.receive')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/refund', [ReturnController::class, 'refundFull'])
+                    ->name('returns.refund')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/partial-refund', [ReturnController::class, 'refundPartial'])
+                    ->name('returns.partial-refund')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/decline', [ReturnController::class, 'decline'])
+                    ->name('returns.decline')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/note', [ReturnController::class, 'note'])
+                    ->name('returns.note')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/tracking', [ReturnController::class, 'tracking'])
+                    ->name('returns.tracking')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/extend', [ReturnController::class, 'extendDeadline'])
+                    ->name('returns.extend')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::post('returns/{orderReturn}/cancel', [ReturnController::class, 'cancel'])
+                    ->name('returns.cancel')
+                    ->middleware('permission:'.PermissionEnum::RETURNS_MANAGE->value);
+                Route::get('circle', 'circle')->name('circle.index')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::post('circle', 'assignCircleMember')->name('circle.assign')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('circle/register', 'circleRegister')->name('circle.register')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('circle/register/export', 'exportCircleRegister')->name('circle.register.export')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::patch('circle/register/{entry}', 'updateCircleRegisterNumber')->name('circle.register.number')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::patch('circle/register/{entry}/visibility', 'hideCircleRegisterEntry')->name('circle.register.hide')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::post('circle/register/{entry}/returning', 'markCircleRegisterReturning')->name('circle.register.returning')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::post('circle/register/{entry}/refunded', 'markCircleRegisterRefunded')->name('circle.register.refunded')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('circle/{member}', 'circleShow')->name('circle.show')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::delete('circle/{member}', 'removeCircleMember')->name('circle.remove')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('heritage', 'heritage')->name('heritage.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::patch('heritage/{product}', 'updateHeritageProduct')->name('heritage.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+
+                Route::get('community', 'community')->name('community.index')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+                Route::post('community/official', 'storeOfficialPost')->name('community.official')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_OFFICIAL->value);
+                Route::post('community/posts/{communityPost}/hide', 'hideCommunityPost')->name('community.hide')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+                Route::patch('community/reports/{communityReport}', 'resolveCommunityReport')->name('community.reports.resolve')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+            });
+
+            Route::controller(HeritageLetterController::class)->group(function () {
+                Route::get('letter', 'index')->name('letter.index')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('letter/export', 'export')->name('letter.export')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+            });
+
+            Route::controller(CommunityPostController::class)->group(function () {
+                Route::put('community/posts/{communityPost}', 'update')->name('community.posts.update')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+                Route::put('community/posts/{communityPost}/translations', 'updateTranslations')->name('community.posts.translations.update')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+                Route::post('community/posts/{communityPost}/translate', 'translate')->name('community.posts.translate')
+                    ->middleware('permission:'.PermissionEnum::COMMUNITY_MODERATE->value);
+            });
+
+            Route::controller(CommunityEventController::class)->group(function () {
+                Route::get('events', 'index')->name('events.index')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('events/create', 'create')->name('events.create')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::post('events', 'store')->name('events.store')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('events/{event}', 'show')->name('events.show')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::get('events/{event}/edit', 'edit')->name('events.edit')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::put('events/{event}', 'update')->name('events.update')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::patch('events/{event}/status', 'updateStatus')->name('events.status')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::put('events/{event}/translations', 'updateTranslations')->name('events.translations.update')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::post('events/{event}/translate', 'translate')->name('events.translate')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+                Route::delete('events/{event}', 'destroy')->name('events.destroy')
+                    ->middleware('permission:'.PermissionEnum::DASHBOARD_VIEW->value);
+            });
+
+            Route::controller(JournalArticleController::class)->group(function () {
+                Route::get('journal', 'index')->name('journal.index')
+                    ->middleware('permission:'.PermissionEnum::POSTS_VIEW->value);
+                Route::get('journal/create', 'create')->name('journal.create')
+                    ->middleware('permission:'.PermissionEnum::POSTS_CREATE->value);
+                Route::post('journal', 'store')->name('journal.store')
+                    ->middleware('permission:'.PermissionEnum::POSTS_CREATE->value);
+                Route::get('journal/{article}', 'show')->name('journal.show')
+                    ->middleware('permission:'.PermissionEnum::POSTS_VIEW->value);
+                Route::get('journal/{article}/edit', 'edit')->name('journal.edit')
+                    ->middleware('permission:'.PermissionEnum::POSTS_EDIT->value);
+                Route::put('journal/{article}', 'update')->name('journal.update')
+                    ->middleware('permission:'.PermissionEnum::POSTS_EDIT->value);
+                Route::put('journal/{article}/translations', 'updateTranslations')->name('journal.translations.update')
+                    ->middleware('permission:'.PermissionEnum::POSTS_VIEW->value);
+                Route::post('journal/{article}/translate', 'translate')->name('journal.translate')
+                    ->middleware('permission:'.PermissionEnum::POSTS_VIEW->value);
+                Route::delete('journal/{article}', 'destroy')->name('journal.destroy')
+                    ->middleware('permission:'.PermissionEnum::POSTS_DELETE->value);
+            });
+
+            Route::controller(AdminProductController::class)->group(function () {
+                Route::get('products', 'index')->name('products.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('products/create', 'create')->name('products.create')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products', 'store')->name('products.store')
+                    ->middleware(['permission:'.PermissionEnum::HERITAGE_VIEW->value, HandlePrecognitiveRequests::class]);
+                Route::get('products/{product}', 'show')->name('products.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('products/{product}/edit', 'edit')->name('products.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('products/{product}', 'update')->name('products.update')
+                    ->middleware(['permission:'.PermissionEnum::HERITAGE_VIEW->value, HandlePrecognitiveRequests::class]);
+                Route::post('products/{product}/media', 'updateMedia')->name('products.media.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products/{product}/sections', 'updateSections')->name('products.sections.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products/{product}/faqs', 'updateFaqs')->name('products.faqs.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('products/{product}/translations', 'updateTranslations')->name('products.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products/{product}/translate', 'translate')->name('products.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('products/{product}/faqs/{faq}/translations', 'updateFaqTranslations')->name('products.faqs.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products/{product}/faqs/{faq}/translate', 'translateFaq')->name('products.faqs.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('products/{product}/sections/translations', 'updateSectionTranslations')->name('products.sections.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('products/{product}/sections/translate', 'translateSections')->name('products.sections.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('products/{product}', 'destroy')->name('products.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('products/{product}/inventory', 'inventory')->name('products.inventory')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(FaqController::class)->group(function () {
+                Route::get('faqs', 'index')->name('faqs.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('faqs/create', 'create')->name('faqs.create')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('faqs', 'store')->name('faqs.store')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('faqs/{faq}', 'show')->name('faqs.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('faqs/{faq}/edit', 'edit')->name('faqs.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('faqs/{faq}', 'update')->name('faqs.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('faqs/{faq}/translations', 'updateTranslations')->name('faqs.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('faqs/{faq}/translate', 'translate')->name('faqs.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('faqs/{faq}', 'destroy')->name('faqs.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(AdminInquiryController::class)->group(function () {
+                Route::get('appointments', 'appointmentsIndex')->name('appointments.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('appointments/{inquiry}', 'appointmentsShow')->name('appointments.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::patch('appointments/{inquiry}/seen', 'updateSeen')->name('appointments.seen')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('appointments/{inquiry}', 'destroy')->name('appointments.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+
+                Route::get('feedback', 'feedbackIndex')->name('feedback.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('feedback/{inquiry}', 'feedbackShow')->name('feedback.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::patch('feedback/{inquiry}/seen', 'updateSeen')->name('feedback.seen')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('feedback/{inquiry}', 'destroy')->name('feedback.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(DressingItemController::class)->group(function () {
+                Route::get('dressing-items', 'index')->name('dressing-items.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('dressing-items/create', 'create')->name('dressing-items.create')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('dressing-items', 'store')->name('dressing-items.store')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('dressing-items/{dressingItem}', 'show')->name('dressing-items.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('dressing-items/{dressingItem}/edit', 'edit')->name('dressing-items.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('dressing-items/{dressingItem}', 'update')->name('dressing-items.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('dressing-items/{dressingItem}', 'destroy')->name('dressing-items.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(OpeningOfferController::class)->group(function () {
+                Route::get('opening-offers', 'index')->name('opening-offers.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('opening-offers/create', 'create')->name('opening-offers.create')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('opening-offers', 'store')->name('opening-offers.store')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('opening-offers/{openingOffer}/edit', 'edit')->name('opening-offers.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('opening-offers/{openingOffer}', 'update')->name('opening-offers.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::delete('opening-offers/{openingOffer}', 'destroy')->name('opening-offers.destroy')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(SiteSettingController::class)->group(function () {
+                Route::get('site-settings', 'edit')->name('site-settings.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::patch('site-settings', 'update')->name('site-settings.update')
+                    ->middleware(['permission:'.PermissionEnum::HERITAGE_VIEW->value, HandlePrecognitiveRequests::class]);
+            });
+
+            Route::controller(StorefrontAccessController::class)->group(function () {
+                Route::get('storefront-access', 'edit')->name('storefront-access.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::patch('storefront-access', 'update')->name('storefront-access.update')
+                    ->middleware(['permission:'.PermissionEnum::HERITAGE_VIEW->value, HandlePrecognitiveRequests::class]);
+            });
+
+            Route::controller(StoryPageController::class)->group(function () {
+                Route::get('story-page', 'edit')->name('story-page.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('story-page', 'update')->name('story-page.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('story-page/translations', 'updateTranslations')->name('story-page.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('story-page/translate', 'translate')->name('story-page.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(HomeHeroController::class)->group(function () {
+                Route::get('home-hero', 'edit')->name('home-hero.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('home-hero', 'update')->name('home-hero.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('home-hero/translations', 'updateTranslations')->name('home-hero.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('home-hero/translate', 'translate')->name('home-hero.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(LegalPageController::class)->group(function () {
+                Route::get('legal-pages', 'index')->name('legal-pages.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('legal-pages/{legalPage}', 'show')->name('legal-pages.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('legal-pages/{legalPage}/edit', 'edit')->name('legal-pages.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('legal-pages/{legalPage}', 'update')->name('legal-pages.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('legal-pages/{legalPage}/translations', 'updateTranslations')->name('legal-pages.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('legal-pages/{legalPage}/translate', 'translate')->name('legal-pages.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(SeoMetaController::class)->group(function () {
+                Route::get('seo-metas', 'index')->name('seo-metas.index')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('seo-metas/{seoMeta}', 'show')->name('seo-metas.show')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::get('seo-metas/{seoMeta}/edit', 'edit')->name('seo-metas.edit')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('seo-metas/{seoMeta}', 'update')->name('seo-metas.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::put('seo-metas/{seoMeta}/translations', 'updateTranslations')->name('seo-metas.translations.update')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+                Route::post('seo-metas/{seoMeta}/translate', 'translate')->name('seo-metas.translate')
+                    ->middleware('permission:'.PermissionEnum::HERITAGE_VIEW->value);
+            });
+
+            Route::controller(CommunitySessionController::class)
+                ->middleware('permission:'.PermissionEnum::SESSIONS_MANAGE->value)
+                ->group(function () {
+                    Route::get('sessions', 'index')->name('community-sessions.index');
+                    Route::get('sessions/{communitySession}', 'show')->name('community-sessions.show');
+                    Route::patch('sessions/{communitySession}/cancel', 'cancel')->name('community-sessions.cancel');
+                    Route::delete('sessions/{communitySession}/participants/{user}', 'removeParticipant')
+                        ->name('community-sessions.participants.destroy');
+                    Route::delete('sessions/{communitySession}', 'destroy')->name('community-sessions.destroy');
+                });
+
+            Route::controller(AdminSessionChatController::class)
+                ->middleware('permission:'.PermissionEnum::SESSIONS_MANAGE->value)
+                ->group(function () {
+                    Route::get('chat', 'index')->name('chat.index');
+                    Route::get('chat/{communitySession}', 'show')->name('chat.show');
+                    Route::post('chat/{communitySession}/messages', 'store')
+                        ->name('chat.messages.store');
+                    Route::delete('chat/{communitySession}/messages/{message}', 'destroyMessage')
+                        ->name('chat.messages.destroy');
+                });
+
+            Route::controller(AdminClubController::class)
+                ->middleware('permission:'.PermissionEnum::CLUBS_MANAGE->value)
+                ->group(function () {
+                    Route::get('clubs', 'index')->name('clubs.index');
+                    Route::get('clubs/create', 'create')->name('clubs.create');
+                    Route::post('clubs', 'store')->name('clubs.store');
+                    Route::get('clubs/{club}', 'show')->name('clubs.show');
+                    Route::get('clubs/{club}/edit', 'edit')->name('clubs.edit');
+                    Route::put('clubs/{club}', 'update')->name('clubs.update');
+                    Route::put('clubs/{club}/translations', 'updateTranslations')->name('clubs.translations.update');
+                    Route::post('clubs/{club}/translate', 'translate')->name('clubs.translate');
+                    Route::patch('clubs/{club}/approve', 'approve')->name('clubs.approve');
+                    Route::patch('clubs/{club}/reject', 'reject')->name('clubs.reject');
+                    Route::post('clubs/{club}/merge', 'merge')->name('clubs.merge');
+                    Route::delete('clubs/{club}', 'destroy')->name('clubs.destroy');
+                });
+
+            // Admins — staff accounts (Access Control).
+            Route::controller(UserController::class)->group(function () {
+                Route::get('admins', 'index')->name('admins.index')
+                    ->middleware('permission:'.PermissionEnum::USERS_INDEX->value);
+                Route::get('admins/create', 'create')->name('admins.create')
+                    ->middleware('permission:'.PermissionEnum::USERS_CREATE->value);
+                Route::post('admins', 'store')->name('admins.store')
+                    ->middleware(['permission:'.PermissionEnum::USERS_CREATE->value, HandlePrecognitiveRequests::class]);
+                Route::get('admins/{user}', 'show')->name('admins.show')
+                    ->middleware('permission:'.PermissionEnum::USERS_VIEW->value);
+                Route::get('admins/{user}/edit', 'edit')->name('admins.edit')
+                    ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
+                Route::put('admins/{user}', 'update')->name('admins.update')
+                    ->middleware(['permission:'.PermissionEnum::USERS_EDIT->value, HandlePrecognitiveRequests::class]);
+                Route::delete('admins/{user}', 'destroy')->name('admins.destroy')
+                    ->middleware('permission:'.PermissionEnum::USERS_DELETE->value);
+            });
+
+            Route::controller(RoleController::class)->group(function () {
+                Route::get('roles', 'index')->name('roles.index')
+                    ->middleware('permission:'.PermissionEnum::ROLES_INDEX->value);
+                Route::get('roles/create', 'create')->name('roles.create')
+                    ->middleware('permission:'.PermissionEnum::ROLES_CREATE->value);
+                Route::post('roles', 'store')->name('roles.store')
+                    ->middleware(['permission:'.PermissionEnum::ROLES_CREATE->value, HandlePrecognitiveRequests::class]);
+                Route::get('roles/{role}/edit', 'edit')->name('roles.edit')
+                    ->middleware('permission:'.PermissionEnum::ROLES_EDIT->value);
+                Route::put('roles/{role}', 'update')->name('roles.update')
+                    ->middleware(['permission:'.PermissionEnum::ROLES_EDIT->value, HandlePrecognitiveRequests::class]);
+                Route::delete('roles/{role}', 'destroy')->name('roles.destroy')
+                    ->middleware('permission:'.PermissionEnum::ROLES_DELETE->value);
+            });
+
+            Route::controller(PermissionController::class)->group(function () {
+                Route::get('permissions', 'index')->name('permissions.index')
+                    ->middleware('permission:'.PermissionEnum::PERMISSIONS_INDEX->value);
+                Route::get('permissions/export', 'export')->name('permissions.export')
+                    ->middleware('permission:'.PermissionEnum::PERMISSIONS_EXPORT->value);
+            });
+
+            Route::controller(RealtimeController::class)
+                ->prefix('realtime')
+                ->name('realtime.')
+                ->middleware('permission:'.PermissionEnum::REALTIME_VIEW->value)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::get('health', 'health')->name('health');
+                    Route::post('ping', 'ping')->name('ping');
+                    Route::post('test-notification', 'testNotification')->name('test-notification');
+                });
+
+            require __DIR__.'/admin-server-monitoring.php';
+
+            Route::controller(NotificationTestController::class)
+                ->prefix('notifications/test')
+                ->name('notifications.test.')
+                ->middleware('permission:'.PermissionEnum::NOTIFICATIONS_TEST->value)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'send')->name('send');
+                });
+
+            Route::controller(AdminNotificationController::class)
+                ->prefix('notifications')
+                ->name('notifications.')
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('read-all', 'readAll')->name('read-all');
+                    Route::get('{userNotification}', 'show')->whereNumber('userNotification')->name('show');
+                    Route::post('{userNotification}/read', 'read')->whereNumber('userNotification')->name('read');
+                    Route::delete('{userNotification}', 'destroy')->whereNumber('userNotification')->name('destroy');
+                });
+        });
+
+        Route::middleware(['auth'])->group(function () {
+            Route::redirect('settings', 'settings/profile');
+
+            Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+            Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+        });
+
+        Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
+        Route::put('settings/password', [SecurityController::class, 'update'])
+            ->middleware('throttle:6,1')
+            ->name('user-password.update');
+    });
+
+Route::prefix('{locale}')
+    ->middleware('locale')
+    ->group(function () {
+        Route::fallback(function () {
+            abort(404);
+        });
+    });
+
+/*
+ * Staff bookmarks often omit the locale prefix. Guests get the home login
+ * modal; signed-in staff land on the localized admin path.
+ */
+Route::get('admin/login', [AuthModalRedirectController::class, 'login']);
+
+Route::get('admin/{path?}', function (Request $request, PostLoginRedirectService $redirects, ?string $path = null) {
+    $user = $request->user();
+    $locale = $redirects->resolveLocale($request);
+
+    if ($user === null) {
+        $target = is_string($path) && $path !== ''
+            ? '/'.$locale.'/admin/'.$path
+            : '/'.$locale.'/admin/dashboard';
+
+        $redirects->remember($request, $target);
+        $request->session()->flash('open_auth_modal', 'login');
+
+        return redirect()->route('maison.home', ['locale' => $locale]);
+    }
+
+    if (! $user->isAdmin()) {
+        return redirect()->to($redirects->urlFor($user, $request));
+    }
+
+    if (! is_string($path) || $path === '') {
+        return redirect('/'.$locale.'/admin/dashboard');
+    }
+
+    if (preg_match('/^(?!.*\\.\\.)[A-Za-z0-9_\\-.\\/]+$/', $path) !== 1) {
+        abort(404);
+    }
+
+    return redirect('/'.$locale.'/admin/'.$path);
+})->where('path', '.*');
+
+/*
+ * Paths with no locale prefix never enter the {locale} group, so the web
+ * middleware (and its Inertia shares) would otherwise be skipped. This
+ * fallback keeps the branded 404 inside that stack.
+ */
+Route::fallback(function () {
+    abort(404);
+});

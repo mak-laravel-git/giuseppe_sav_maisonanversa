@@ -1,0 +1,231 @@
+import { Link, router, usePage } from '@inertiajs/react';
+import { CalendarDays, Clock, Gauge, Timer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { PartnerBadge } from '@/components/maison/community/partner-badge';
+import { SessionChatButton } from '@/components/maison/community/sessions/chat/session-chat-button';
+import { PlayerSlots } from '@/components/maison/community/sessions/player-slots';
+import { ShareSessionButton } from '@/components/maison/community/sessions/share-session-button';
+import { useOptionalShellActions } from '@/components/maison/shell/shell-actions';
+import { storePendingSessionJoin } from '@/lib/pending-session-join';
+import {
+    formatDuration,
+    formatSessionDate,
+    formatSessionTime,
+} from '@/lib/session-format';
+import { cn } from '@/lib/utils';
+import * as sessionRoutes from '@/routes/community/sessions';
+import type { SessionCard as SessionCardData } from '@/types/session';
+
+type SessionCardProps = {
+    session: SessionCardData;
+};
+
+export function SessionCard({ session }: SessionCardProps) {
+    const { t } = useTranslation();
+    const { auth, locale } = usePage().props;
+    const shellActions = useOptionalShellActions();
+    const args = { locale, communitySession: Number(session.id) };
+    const pendingCount = session.pending_count ?? 0;
+
+    function handleJoin() {
+        if (!auth?.user) {
+            storePendingSessionJoin(session.id);
+            shellActions?.openAuth('register');
+
+            return;
+        }
+
+        router.post(sessionRoutes.join(args).url, {}, { preserveScroll: true });
+    }
+
+    function handleLeave() {
+        router.delete(sessionRoutes.leave(args).url, { preserveScroll: true });
+    }
+
+    const showUrl = sessionRoutes.show(args).url;
+
+    return (
+        <article className="flex flex-col gap-5 border border-gold/15 bg-cream2 p-6 transition-colors hover:border-gold/35 md:flex-row md:items-center md:justify-between md:p-7">
+            <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2 font-sans text-[10px] tracking-[0.2em] text-stone uppercase">
+                    <span className="text-choc">{t(session.sport_label)}</span>
+                    {session.club && (
+                        <>
+                            <span aria-hidden="true">·</span>
+                            <span>{session.club.city}</span>
+                        </>
+                    )}
+                </div>
+
+                <Link
+                    href={showUrl}
+                    className="flex flex-wrap items-center gap-2 font-serif text-[20px] font-medium text-choc hover:text-gold2 md:text-[22px]"
+                >
+                    {session.club?.name ?? t('Unknown club')}
+                </Link>
+
+                {session.club?.is_partner && <PartnerBadge className="mt-2" />}
+
+                <p className="mt-2 font-sans text-[11px] tracking-[0.08em] text-stone">
+                    {t('Organised by {{name}}', {
+                        name: session.host.name || session.host.initials,
+                    })}
+                </p>
+
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-sans text-[11px] tracking-[0.08em] text-stone">
+                    <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays className="size-3.5" aria-hidden="true" />
+                        {formatSessionDate(session.starts_at, locale)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <Clock className="size-3.5" aria-hidden="true" />
+                        {formatSessionTime(session.starts_at, locale)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <Timer className="size-3.5" aria-hidden="true" />
+                        {formatDuration(session.duration_minutes)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <Gauge className="size-3.5" aria-hidden="true" />
+                        {t(session.level_label)}
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-start gap-4 md:items-end">
+                <PlayerSlots
+                    players={session.players}
+                    openSlots={session.open_slots}
+                    pendingSlots={pendingCount}
+                />
+
+                <span className="font-sans text-[10px] tracking-[0.16em] text-stone uppercase">
+                    {session.is_full || session.open_slots <= 0
+                        ? t('Full')
+                        : session.open_slots === 1
+                          ? t('1 spot left')
+                          : t('{{count}} spots left', {
+                                count: session.open_slots,
+                            })}
+                    {pendingCount > 0 &&
+                        ` · ${t('{{count}} pending', { count: pendingCount })}`}
+                </span>
+
+                <div className="flex flex-wrap items-center gap-3 md:justify-end">
+                    <SessionChatButton session={session} />
+                    {session.share_url && (
+                        <ShareSessionButton
+                            url={session.share_url}
+                            title={session.club?.name ?? t('Session')}
+                        />
+                    )}
+                    <SessionAction
+                        session={session}
+                        onJoin={handleJoin}
+                        onLeave={handleLeave}
+                        showUrl={showUrl}
+                    />
+                </div>
+            </div>
+        </article>
+    );
+}
+
+type SessionActionProps = {
+    session: SessionCardData;
+    showUrl: string;
+    onJoin: () => void;
+    onLeave: () => void;
+};
+
+function SessionAction({
+    session,
+    showUrl,
+    onJoin,
+    onLeave,
+}: SessionActionProps) {
+    const { t } = useTranslation();
+
+    if (session.is_cancelled) {
+        return <StatusPill label={t('Session cancelled')} />;
+    }
+
+    if (session.is_past) {
+        return <StatusPill label={t('Session complete')} />;
+    }
+
+    if (session.is_host) {
+        return (
+            <Link href={showUrl} className={cn(outlineButton)}>
+                {t('Manage session')}
+            </Link>
+        );
+    }
+
+    if (session.can_leave) {
+        return (
+            <button
+                type="button"
+                onClick={onLeave}
+                className={cn(outlineButton)}
+            >
+                {t('Leave session')}
+            </button>
+        );
+    }
+
+    if (session.is_pending) {
+        return (
+            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+                <StatusPill label={t('Request pending')} />
+                {session.can_withdraw && (
+                    <button
+                        type="button"
+                        onClick={onLeave}
+                        className={cn(outlineButton)}
+                    >
+                        {t('Withdraw request')}
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    if (session.viewer_status === 'rejected') {
+        return <StatusPill label={t('Request declined')} />;
+    }
+
+    if (session.is_full) {
+        return <StatusPill label={t('Session full')} />;
+    }
+
+    if (session.registration_closed) {
+        return <StatusPill label={t('Registration closed')} />;
+    }
+
+    if (!session.can_join) {
+        return <StatusPill label={t('All places requested')} />;
+    }
+
+    return (
+        <button type="button" onClick={onJoin} className={cn(solidButton)}>
+            {t('Join')}
+        </button>
+    );
+}
+
+function StatusPill({ label }: { label: string }) {
+    return (
+        <span className="border border-gold/20 bg-gold/8 px-5 py-3 font-sans text-[10px] tracking-[0.2em] text-stone uppercase">
+            {label}
+        </span>
+    );
+}
+
+const solidButton =
+    'cursor-pointer border-none bg-choc px-7 py-3.5 font-sans text-[10px] font-medium tracking-[0.2em] text-cream uppercase transition-colors hover:bg-gold2';
+
+const outlineButton =
+    'cursor-pointer border border-gold/30 bg-transparent px-7 py-3.5 font-sans text-[10px] font-medium tracking-[0.2em] text-choc uppercase transition-colors hover:border-gold hover:bg-gold/10';
+
+export { solidButton, outlineButton };

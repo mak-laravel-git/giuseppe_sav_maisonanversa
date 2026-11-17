@@ -1,0 +1,100 @@
+import { Head } from '@inertiajs/react';
+import { Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import PassportPdfController from '@/actions/App/Http/Controllers/Member/PassportPdfController';
+import {
+    MemberEmptyState,
+    MemberPageHeader,
+    MemberPanel,
+} from '@/components/member/member-ui';
+import { wayfinderLocale } from '@/lib/wayfinder-defaults';
+
+type PassportPage = { title: string; body: string };
+
+export default function MemberPassport({
+    passport,
+}: {
+    passport: {
+        editionNumber: string;
+        productName: string;
+        racketLabel: string;
+        pages: PassportPage[];
+        verificationUrl?: string;
+    } | null;
+}) {
+    const { t } = useTranslation();
+
+    if (passport === null) {
+        return (
+            <>
+                <Head title={t('Digital Heritage Passport')} />
+                <MemberPageHeader title={t('Digital Heritage Passport')} />
+                <MemberEmptyState
+                    title={t('No edition assigned yet')}
+                    description={t(
+                        'You are a Founding Circle member, but no Heritage edition is linked to your account yet. Contact the team for more information.',
+                    )}
+                />
+            </>
+        );
+    }
+
+    return (
+        <>
+            <Head title={t('Digital Heritage Passport')} />
+            <MemberPageHeader
+                eyebrow={t('Founding Circle')}
+                title={t('Digital Heritage Passport')}
+                description={t(
+                    "Four pages of the physical passport — a reading copy until the edition ships.",
+                )}
+            />
+
+            <MemberPanel className="mb-8 bg-choc p-8 text-center">
+                <p className="font-sans text-[9px] tracking-[0.35em] text-gold uppercase">
+                    {t('Founding Circle')}
+                </p>
+                <p className="mt-6 font-sans text-[12px] tracking-[0.24em] text-cream uppercase">
+                    {passport.productName}
+                </p>
+                <p className="mt-3 font-serif text-[32px] text-gold">
+                    {t('Racket {{label}}', { label: passport.racketLabel })}
+                </p>
+            </MemberPanel>
+
+            <div className="mb-8">
+                <a
+                    href={PassportPdfController.url(wayfinderLocale())}
+                    className="inline-flex items-center gap-2 border border-gold/45 bg-choc3 px-4 py-2.5 font-sans text-[11px] tracking-[0.16em] text-cream uppercase no-underline transition-colors hover:border-gold hover:text-gold"
+                >
+                    <Download className="size-3.5" aria-hidden />
+                    {t('Download PDF')}
+                </a>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                {passport.pages.map((page, index) => (
+                    <MemberPanel key={page.title} className="min-h-48 bg-choc">
+                        <p className="font-sans text-[9px] tracking-[0.25em] text-gold uppercase">
+                            {t('Page {{number}}', {
+                                number: String(index + 1).padStart(2, '0'),
+                            })}
+                        </p>
+                        <h2 className="mt-3 font-serif text-[26px] text-cream">
+                            {page.title}
+                        </h2>
+                        <p className="mt-4 text-[15px] leading-[1.8] text-sand">
+                            {page.body}
+                        </p>
+                        {page.title === passport.pages[3]?.title &&
+                            passport.verificationUrl && (
+                                <p className="mt-4 font-sans text-[11px] break-all text-gold">
+                                    {passport.verificationUrl}
+                                </p>
+                            )}
+                    </MemberPanel>
+                ))}
+            </div>
+        </>
+    );
+}

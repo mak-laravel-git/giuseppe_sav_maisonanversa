@@ -1,0 +1,12 @@
+packages:
+  - '.'
+
+allowBuilds:
+  msw: false
+  unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - satori@0.57.2
+
+publicHoistPattern:
+  - '@inertiajs/core'

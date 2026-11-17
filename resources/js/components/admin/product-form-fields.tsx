@@ -1,0 +1,1048 @@
+import type { SetDataAction } from '@inertiajs/react';
+import { Wand2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AdminPanel } from '@/components/admin/admin-resource-shell';
+import { ProductSectionEditor } from '@/components/admin/product-section-editor';
+import { RepeaterField } from '@/components/admin/repeater-field';
+import FileUpload from '@/components/file-upload';
+import type { ExistingFile } from '@/components/file-upload';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import type {
+    ProductFaqFormData,
+    ProductSectionCatalogueEntry,
+    ProductSectionFormData,
+} from '@/types/admin-product';
+import { emptyFaq } from '@/types/admin-product';
+
+export type ProductFormData = {
+    name: string;
+    slug: string;
+    type: 'limited_edition' | 'simple';
+    status: 'active' | 'coming_soon' | 'archived';
+    sort_order: string;
+    amount: string;
+    edition_total: string;
+    edition_number_prefix: string;
+    edition_number_postfix: string;
+    archive_edition_numbers: number[];
+    stock_quantity: string;
+    is_published: boolean;
+    public_at: string;
+    grants_founding_circle: boolean;
+    expected_delivery_label: string;
+    eyebrow: string;
+    hero_eyebrow: string;
+    hero_subtitle: string;
+    description: string;
+    meta_title: string;
+    meta_description: string;
+    meta_keywords: string;
+    og_image: File | null;
+    remove_og_image: boolean;
+    primary_image: File | null;
+    gallery_images: File[] | null;
+    remove_primary_image: boolean;
+    gallery_keep: string[];
+    sections: ProductSectionFormData[];
+    faqs: ProductFaqFormData[];
+};
+
+export type ProductFormErrors = Partial<Record<string, string>>;
+
+type SharedProps = {
+    data: ProductFormData;
+    errors: ProductFormErrors;
+    setData: SetDataAction<ProductFormData>;
+};
+
+export function slugify(value: string): string {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function OptionCard({
+    selected,
+    title,
+    description,
+    onSelect,
+}: {
+    selected: boolean;
+    title: string;
+    description: string;
+    onSelect: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onSelect}
+            aria-pressed={selected}
+            className={cn(
+                'rounded-xl border p-4 text-left transition-colors',
+                selected
+                    ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
+                    : 'border-border bg-card hover:border-primary/40 hover:bg-muted/40',
+            )}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-sm font-medium">{title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        {description}
+                    </p>
+                </div>
+                <span
+                    className={cn(
+                        'mt-0.5 size-4 shrink-0 rounded-full border',
+                        selected
+                            ? 'border-primary bg-primary'
+                            : 'border-muted-foreground/40',
+                    )}
+                />
+            </div>
+        </button>
+    );
+}
+
+export function ProductBasicsFields({ data, errors, setData }: SharedProps) {
+    const { t } = useTranslation();
+
+    return (
+        <AdminPanel
+            title={t('Basic details')}
+            description={t('Name, slug, type and hero copy for this product.')}
+        >
+            <div className="grid items-start gap-5 md:grid-cols-2">
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="name">{t('Name')}</Label>
+                    <Input
+                        id="name"
+                        value={data.name}
+                        onChange={(event) =>
+                            setData('name', event.target.value)
+                        }
+                        placeholder={t('e.g. Heritage Nº 002')}
+                        autoFocus
+                    />
+                    <InputError message={errors.name} />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="slug">{t('Slug')}</Label>
+                    <div className="flex gap-2">
+                        <Input
+                            id="slug"
+                            value={data.slug}
+                            onChange={(event) =>
+                                setData('slug', event.target.value)
+                            }
+                            placeholder={t('e.g. heritage-no-002')}
+                            className="min-w-0 flex-1"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            aria-label={t('Generate slug from name')}
+                            title={t('Generate slug from name')}
+                            disabled={!data.name.trim()}
+                            onClick={() => setData('slug', slugify(data.name))}
+                        >
+                            <Wand2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <InputError message={errors.slug} />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="type">{t('Type')}</Label>
+                    <Select
+                        value={data.type}
+                        onValueChange={(value) =>
+                            setData('type', value as ProductFormData['type'])
+                        }
+                    >
+                        <SelectTrigger id="type" className="w-full">
+                            <SelectValue placeholder={t('Type')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="simple">
+                                {t('Simple stock')}
+                            </SelectItem>
+                            <SelectItem value="limited_edition">
+                                {t('Limited edition')}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.type} />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="status">{t('Catalog status')}</Label>
+                    <Select
+                        value={data.status}
+                        onValueChange={(value) =>
+                            setData(
+                                'status',
+                                value as ProductFormData['status'],
+                            )
+                        }
+                    >
+                        <SelectTrigger id="status" className="w-full">
+                            <SelectValue placeholder={t('Catalog status')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="active">
+                                {t('Available')}
+                            </SelectItem>
+                            <SelectItem value="coming_soon">
+                                {t('Coming soon')}
+                            </SelectItem>
+                            <SelectItem value="archived">
+                                {t('Archived')}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError message={errors.status} />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="sort_order">{t('Sort order')}</Label>
+                    <Input
+                        id="sort_order"
+                        type="number"
+                        value={data.sort_order}
+                        onChange={(event) =>
+                            setData('sort_order', event.target.value)
+                        }
+                        placeholder="0"
+                    />
+                    <InputError message={errors.sort_order} />
+                </div>
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="eyebrow">{t('Product label')}</Label>
+                    <Input
+                        id="eyebrow"
+                        value={data.eyebrow}
+                        onChange={(event) =>
+                            setData('eyebrow', event.target.value)
+                        }
+                        placeholder={t(
+                            'e.g. Maison Anversa · Founding Edition',
+                        )}
+                    />
+                    <InputError message={errors.eyebrow} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="hero_eyebrow">{t('Hero eyebrow')}</Label>
+                    <Input
+                        id="hero_eyebrow"
+                        value={data.hero_eyebrow}
+                        onChange={(event) =>
+                            setData('hero_eyebrow', event.target.value)
+                        }
+                        placeholder={t(
+                            'e.g. Founding Edition · 100 pieces in Europe',
+                        )}
+                    />
+                    <InputError message={errors.hero_eyebrow} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="hero_subtitle">
+                        {t('Hero subtitle')}
+                    </Label>
+                    <Textarea
+                        id="hero_subtitle"
+                        value={data.hero_subtitle}
+                        onChange={(event) =>
+                            setData('hero_subtitle', event.target.value)
+                        }
+                        className="min-h-24 resize-y"
+                    />
+                    <InputError message={errors.hero_subtitle} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="description">
+                        {t('Product description')}
+                    </Label>
+                    <Textarea
+                        id="description"
+                        value={data.description}
+                        onChange={(event) =>
+                            setData('description', event.target.value)
+                        }
+                        className="min-h-32 resize-y"
+                    />
+                    <InputError message={errors.description} />
+                </div>
+            </div>
+            <p className="mt-5 text-xs text-muted-foreground">
+                {t(
+                    'Text on this form is the source. DeepL fills NL, EN, and FR after saving. Adjust per language via Translations.',
+                )}
+            </p>
+        </AdminPanel>
+    );
+}
+
+export function ProductSeoFields({
+    data,
+    errors,
+    setData,
+    existingOgImage = null,
+}: SharedProps & {
+    existingOgImage?: ExistingFile | null;
+}) {
+    const { t } = useTranslation();
+    const showExistingOgImage =
+        Boolean(existingOgImage) && !data.og_image && !data.remove_og_image;
+
+    return (
+        <AdminPanel
+            title={t('SEO')}
+            description={t(
+                'Optional search and social metadata. Empty fields fall back on the storefront to name, description and product photo — they are not filled in automatically.',
+            )}
+        >
+            <div className="grid items-start gap-5 md:grid-cols-2">
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="meta_title">{t('Meta title')}</Label>
+                    <Input
+                        id="meta_title"
+                        value={data.meta_title}
+                        onChange={(event) =>
+                            setData('meta_title', event.target.value)
+                        }
+                        placeholder={t(
+                            'Leave empty to use the product name',
+                        )}
+                    />
+                    <InputError message={errors.meta_title} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="meta_description">
+                        {t('Meta description')}
+                    </Label>
+                    <Textarea
+                        id="meta_description"
+                        value={data.meta_description}
+                        onChange={(event) =>
+                            setData('meta_description', event.target.value)
+                        }
+                        className="min-h-24 resize-y"
+                        placeholder={t(
+                            'Leave empty to use the product description',
+                        )}
+                    />
+                    <InputError message={errors.meta_description} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label htmlFor="meta_keywords">{t('Meta keywords')}</Label>
+                    <Input
+                        id="meta_keywords"
+                        value={data.meta_keywords}
+                        onChange={(event) =>
+                            setData('meta_keywords', event.target.value)
+                        }
+                        placeholder={t('Comma-separated, optional')}
+                    />
+                    <InputError message={errors.meta_keywords} />
+                </div>
+                <div className="grid min-w-0 gap-2 md:col-span-2">
+                    <Label>{t('OG image')}</Label>
+                    <FileUpload
+                        accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                        maxSize={5}
+                        value={data.og_image}
+                        onChange={(file) => {
+                            setData((current) => ({
+                                ...current,
+                                og_image: (file as File | null) ?? null,
+                                remove_og_image: false,
+                            }));
+                        }}
+                        existingFiles={
+                            showExistingOgImage && existingOgImage
+                                ? [existingOgImage]
+                                : []
+                        }
+                        onRemoveExisting={() =>
+                            setData('remove_og_image', true)
+                        }
+                        placeholder={t(
+                            'Drop a social image here or click to browse',
+                        )}
+                        hint={t(
+                            'PNG, JPG or WEBP. Leave empty to use the product photo.',
+                        )}
+                        error={errors.og_image}
+                    />
+                </div>
+            </div>
+        </AdminPanel>
+    );
+}
+
+export function ProductPricingFields({ data, errors, setData }: SharedProps) {
+    const { t } = useTranslation();
+    const isLimited = data.type === 'limited_edition';
+    const editionTotal = Math.min(
+        Math.max(0, Number.parseInt(data.edition_total || '0', 10) || 0),
+        10000,
+    );
+    const padWidth = Math.max(3, String(Math.max(editionTotal, 1)).length);
+
+    const formatEditionLabel = (number: number): string =>
+        `${data.edition_number_prefix}${String(number).padStart(padWidth, '0')}${data.edition_number_postfix}`;
+
+    const editionNumbers = useMemo(
+        () => Array.from({ length: editionTotal }, (_, index) => index + 1),
+        [editionTotal],
+    );
+
+    const archived = new Set(data.archive_edition_numbers);
+
+    const toggleArchive = (number: number, checked: boolean) => {
+        const next = checked
+            ? [...data.archive_edition_numbers, number].sort((a, b) => a - b)
+            : data.archive_edition_numbers.filter((value) => value !== number);
+
+        setData('archive_edition_numbers', next);
+    };
+
+    const handleEditionTotalChange = (value: string) => {
+        const total = Math.min(
+            Math.max(0, Number.parseInt(value || '0', 10) || 0),
+            10000,
+        );
+
+        setData((current) => ({
+            ...current,
+            edition_total: value,
+            archive_edition_numbers: current.archive_edition_numbers.filter(
+                (number) => number <= total,
+            ),
+        }));
+    };
+
+    return (
+        <div className="grid w-full gap-6">
+            <AdminPanel
+                title={t('Price & delivery')}
+                description={t('Retail price and expected delivery promise.')}
+            >
+                <div className="grid items-start gap-5 md:grid-cols-2">
+                    <div className="grid min-w-0 gap-2">
+                        <Label htmlFor="amount">{t('Amount')}</Label>
+                        <div className="relative">
+                            <Input
+                                id="amount"
+                                type="text"
+                                inputMode="decimal"
+                                value={data.amount}
+                                onChange={(event) =>
+                                    setData('amount', event.target.value)
+                                }
+                                placeholder="249.00"
+                                className="pr-12"
+                            />
+                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+                                EUR
+                            </span>
+                        </div>
+                        <InputError message={errors.amount} />
+                    </div>
+                    <div className="grid min-w-0 gap-2">
+                        <Label htmlFor="expected_delivery_label">
+                            {t('Expected delivery')}
+                        </Label>
+                        <Input
+                            id="expected_delivery_label"
+                            value={data.expected_delivery_label}
+                            onChange={(event) =>
+                                setData(
+                                    'expected_delivery_label',
+                                    event.target.value,
+                                )
+                            }
+                            placeholder={t(
+                                'e.g. Q1 2027 — subject to production',
+                            )}
+                        />
+                        <InputError message={errors.expected_delivery_label} />
+                    </div>
+                </div>
+
+                <div className="mt-5 grid gap-3">
+                    <Label>{t('Founding Circle')}</Label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <OptionCard
+                            selected={data.grants_founding_circle}
+                            title={t('Grants access')}
+                            description={t(
+                                'Buyers get access to the Founding Circle.',
+                            )}
+                            onSelect={() =>
+                                setData('grants_founding_circle', true)
+                            }
+                        />
+                        <OptionCard
+                            selected={!data.grants_founding_circle}
+                            title={t('No access')}
+                            description={t(
+                                'No Founding Circle rights on purchase.',
+                            )}
+                            onSelect={() =>
+                                setData('grants_founding_circle', false)
+                            }
+                        />
+                    </div>
+                </div>
+            </AdminPanel>
+
+            <AdminPanel
+                title={isLimited ? t('Edition & stock') : t('Stock')}
+                description={
+                    isLimited
+                        ? t(
+                              'Set the edition size and mark which numbers stay in the archive.',
+                          )
+                        : t('Manage the simple stock for this product.')
+                }
+            >
+                {isLimited ? (
+                    <div className="grid gap-5">
+                        <div className="grid gap-5 md:grid-cols-3">
+                            <div className="grid gap-2">
+                                <Label htmlFor="edition_total">
+                                    {t('Edition size')}
+                                </Label>
+                                <Input
+                                    id="edition_total"
+                                    type="number"
+                                    min={1}
+                                    max={10000}
+                                    value={data.edition_total}
+                                    onChange={(event) =>
+                                        handleEditionTotalChange(
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="100"
+                                />
+                                <InputError message={errors.edition_total} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edition_number_prefix">
+                                    {t('Prefix')}
+                                </Label>
+                                <Input
+                                    id="edition_number_prefix"
+                                    value={data.edition_number_prefix}
+                                    onChange={(event) =>
+                                        setData(
+                                            'edition_number_prefix',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder={t('e.g. No. or MA-')}
+                                />
+                                <InputError
+                                    message={errors.edition_number_prefix}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edition_number_postfix">
+                                    {t('Postfix')}
+                                </Label>
+                                <Input
+                                    id="edition_number_postfix"
+                                    value={data.edition_number_postfix}
+                                    onChange={(event) =>
+                                        setData(
+                                            'edition_number_postfix',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder={t('e.g. -A or /100')}
+                                />
+                                <InputError
+                                    message={errors.edition_number_postfix}
+                                />
+                            </div>
+                        </div>
+
+                        {editionTotal > 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                                {t('Preview')}:{' '}
+                                <span className="font-mono text-foreground">
+                                    {formatEditionLabel(1)}
+                                </span>
+                                {' · '}
+                                <span className="font-mono text-foreground">
+                                    {formatEditionLabel(editionTotal)}
+                                </span>
+                            </p>
+                        ) : null}
+
+                        {editionTotal > 0 ? (
+                            <div className="grid gap-3">
+                                <div className="flex flex-wrap items-end justify-between gap-2">
+                                    <div>
+                                        <Label>{t('Archive numbers')}</Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {t(
+                                                'Select the numbers that are not for sale. Empty = everything is sellable.',
+                                            )}
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {t('{{count}} archived', {
+                                            count: data.archive_edition_numbers
+                                                .length,
+                                        })}
+                                    </p>
+                                </div>
+                                {/* contain-strict: Chromium otherwise lets this tall grid inflate page scrollHeight */}
+                                <div className="h-96 overflow-hidden rounded-lg border bg-muted/20 contain-strict">
+                                    <div className="h-full scrollbar-none overflow-y-auto p-3">
+                                        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+                                            {editionNumbers.map((number) => {
+                                                const isArchived =
+                                                    archived.has(number);
+                                                const id = `edition-${number}`;
+
+                                                return (
+                                                    <label
+                                                        key={number}
+                                                        htmlFor={id}
+                                                        className={cn(
+                                                            'flex cursor-pointer flex-col items-center gap-1.5 rounded-md border px-1 py-2 text-center transition-colors',
+                                                            isArchived
+                                                                ? 'border-gold/40 bg-gold/10'
+                                                                : 'border-transparent hover:border-border hover:bg-background',
+                                                        )}
+                                                    >
+                                                        <Checkbox
+                                                            id={id}
+                                                            checked={isArchived}
+                                                            onCheckedChange={(
+                                                                checked,
+                                                            ) =>
+                                                                toggleArchive(
+                                                                    number,
+                                                                    checked ===
+                                                                        true,
+                                                                )
+                                                            }
+                                                        />
+                                                        <span className="max-w-full truncate font-mono text-[10px] tabular-nums">
+                                                            {formatEditionLabel(
+                                                                number,
+                                                            )}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                                <InputError
+                                    message={errors.archive_edition_numbers}
+                                />
+                            </div>
+                        ) : null}
+                    </div>
+                ) : (
+                    <div className="grid max-w-xs gap-2">
+                        <Label htmlFor="stock_quantity">{t('Stock')}</Label>
+                        <Input
+                            id="stock_quantity"
+                            type="number"
+                            min={0}
+                            value={data.stock_quantity}
+                            onChange={(event) =>
+                                setData('stock_quantity', event.target.value)
+                            }
+                            placeholder="0"
+                        />
+                        <InputError message={errors.stock_quantity} />
+                    </div>
+                )}
+            </AdminPanel>
+        </div>
+    );
+}
+
+export function ProductMediaFields({
+    data,
+    errors,
+    setData,
+    existingPrimary = null,
+    existingGallery = [],
+    isUploading = false,
+    uploadProgress = null,
+    onCancelUpload,
+}: SharedProps & {
+    existingPrimary?: ExistingFile | null;
+    existingGallery?: ExistingFile[];
+    isUploading?: boolean;
+    uploadProgress?: number | null;
+    onCancelUpload?: () => void;
+}) {
+    const { t } = useTranslation();
+    const showExistingPrimary =
+        Boolean(existingPrimary) &&
+        !data.primary_image &&
+        !data.remove_primary_image;
+
+    return (
+        <AdminPanel
+            title={t('Images')}
+            description={t(
+                'Upload a primary cover photo and optional gallery images.',
+            )}
+        >
+            <div className="grid gap-8">
+                <div className="grid gap-2">
+                    <Label>{t('Primary image')}</Label>
+                    <FileUpload
+                        accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                        maxSize={5}
+                        value={data.primary_image}
+                        onChange={(file) => {
+                            setData((current) => ({
+                                ...current,
+                                primary_image: (file as File | null) ?? null,
+                                remove_primary_image: false,
+                            }));
+                        }}
+                        existingFiles={
+                            showExistingPrimary && existingPrimary
+                                ? [existingPrimary]
+                                : []
+                        }
+                        onRemoveExisting={() =>
+                            setData('remove_primary_image', true)
+                        }
+                        placeholder={t(
+                            'Drag & drop a cover image, or click to browse',
+                        )}
+                        hint={t('PNG, JPG or WEBP')}
+                        error={errors.primary_image}
+                        isUploading={isUploading}
+                        uploadProgress={uploadProgress}
+                        onCancel={onCancelUpload}
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label>{t('Gallery')}</Label>
+                    <FileUpload
+                        multiple
+                        accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                        maxSize={5}
+                        maxFiles={12}
+                        value={data.gallery_images}
+                        onChange={(files) =>
+                            setData((current) => ({
+                                ...current,
+                                gallery_images:
+                                    (files as File[] | null) ?? null,
+                            }))
+                        }
+                        existingFiles={existingGallery.filter((file) =>
+                            data.gallery_keep.includes(String(file.id)),
+                        )}
+                        onRemoveExisting={(id) =>
+                            setData(
+                                'gallery_keep',
+                                data.gallery_keep.filter(
+                                    (path) => path !== String(id),
+                                ),
+                            )
+                        }
+                        placeholder={t(
+                            'Drag & drop gallery images, or click to browse',
+                        )}
+                        hint={t('PNG, JPG or WEBP · max. 12 images')}
+                        error={errors.gallery_images}
+                        isUploading={isUploading}
+                        uploadProgress={uploadProgress}
+                        onCancel={onCancelUpload}
+                    />
+                </div>
+            </div>
+        </AdminPanel>
+    );
+}
+
+type StoredProductSection = {
+    key: string;
+    existing_image?: string | null;
+};
+
+export function ProductSectionFields({
+    data,
+    setData,
+    catalogue,
+    storedSections = [],
+}: SharedProps & {
+    catalogue: ProductSectionCatalogueEntry[];
+    storedSections?: StoredProductSection[];
+}) {
+    const { t } = useTranslation();
+
+    const patchSection = (
+        key: string,
+        patch: Partial<ProductSectionFormData>,
+    ) => {
+        setData(
+            'sections',
+            data.sections.map((section) =>
+                section.key === key ? { ...section, ...patch } : section,
+            ),
+        );
+    };
+
+    const moveSection = (index: number, direction: -1 | 1) => {
+        const target = index + direction;
+
+        if (target < 0 || target >= data.sections.length) {
+            return;
+        }
+
+        const next = [...data.sections];
+        const [moved] = next.splice(index, 1);
+        next.splice(target, 0, moved);
+
+        setData(
+            'sections',
+            next.map((section, at) => ({ ...section, sort_order: at })),
+        );
+    };
+
+    return (
+        <AdminPanel
+            title={t('Page sections')}
+            description={t(
+                'Manage each section of the public product page: headings, items, visibility and order.',
+            )}
+        >
+            <div className="grid gap-3">
+                {data.sections.map((section, index) => {
+                    const entry = catalogue.find(
+                        (candidate) => candidate.key === section.key,
+                    );
+
+                    if (!entry) {
+                        return null;
+                    }
+
+                    return (
+                        <ProductSectionEditor
+                            key={section.key}
+                            entry={entry}
+                            section={section}
+                            storedExistingImage={
+                                storedSections.find(
+                                    (stored) => stored.key === section.key,
+                                )?.existing_image ?? null
+                            }
+                            onChange={(patch) =>
+                                patchSection(section.key, patch)
+                            }
+                            onMove={(direction) =>
+                                moveSection(index, direction)
+                            }
+                            canMoveUp={index > 0}
+                            canMoveDown={index < data.sections.length - 1}
+                        />
+                    );
+                })}
+            </div>
+        </AdminPanel>
+    );
+}
+
+export function ProductFaqFields({ data, setData }: SharedProps) {
+    const { t } = useTranslation();
+
+    return (
+        <AdminPanel
+            title={t('Frequently asked questions')}
+            description={t(
+                'Questions and answers shown only on this product.',
+            )}
+        >
+            <RepeaterField<ProductFaqFormData>
+                rows={data.faqs}
+                onChange={(faqs) => setData('faqs', faqs)}
+                makeRow={emptyFaq}
+                rowKey={(row) => row.uid}
+                addLabel="Add question"
+                emptyLabel="No questions for this product yet."
+                renderRow={(row, _index, update) => (
+                    <div className="grid gap-3">
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">{t('Question')}</Label>
+                            <Input
+                                value={row.question}
+                                onChange={(event) =>
+                                    update({ question: event.target.value })
+                                }
+                            />
+                        </div>
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">{t('Answer')}</Label>
+                            <Textarea
+                                value={row.answer}
+                                onChange={(event) =>
+                                    update({ answer: event.target.value })
+                                }
+                                className="min-h-24 resize-y"
+                            />
+                        </div>
+                        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs">
+                            <Checkbox
+                                checked={row.is_published}
+                                onCheckedChange={(checked) =>
+                                    update({ is_published: checked === true })
+                                }
+                            />
+                            {t('Published')}
+                        </label>
+                    </div>
+                )}
+            />
+        </AdminPanel>
+    );
+}
+
+export function ProductPublishFields({ data, errors, setData }: SharedProps) {
+    const { t } = useTranslation();
+    const visibleSections = data.sections.filter(
+        (section) => section.is_visible,
+    ).length;
+
+    return (
+        <AdminPanel
+            title={t('Publication')}
+            description={t('Review the summary and publish.')}
+        >
+            <div className="grid gap-5">
+                <dl className="grid gap-3 rounded-lg border bg-muted/20 p-4 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            {t('Name')}
+                        </dt>
+                        <dd className="font-medium">{data.name || '—'}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            {t('Slug')}
+                        </dt>
+                        <dd className="font-mono text-xs">
+                            {data.slug || '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            {t('Amount')}
+                        </dt>
+                        <dd className="font-medium">
+                            {data.amount || '—'} EUR
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            {t('Visible sections')}
+                        </dt>
+                        <dd className="font-medium">{visibleSections}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            {t('Frequently asked questions')}
+                        </dt>
+                        <dd className="font-medium">{data.faqs.length}</dd>
+                    </div>
+                </dl>
+
+                <div className="grid gap-3">
+                    <Label>{t('Status')}</Label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <OptionCard
+                            selected={data.is_published}
+                            title={t('Published')}
+                            description={t(
+                                'Visible on the public catalog pages.',
+                            )}
+                            onSelect={() => setData('is_published', true)}
+                        />
+                        <OptionCard
+                            selected={!data.is_published}
+                            title={t('Draft')}
+                            description={t(
+                                'Only visible in the admin panel.',
+                            )}
+                            onSelect={() => setData('is_published', false)}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid min-w-0 gap-2">
+                    <Label htmlFor="public_at">{t('Public from')}</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Input
+                            id="public_at"
+                            type="datetime-local"
+                            value={data.public_at}
+                            onChange={(event) =>
+                                setData('public_at', event.target.value)
+                            }
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                const publicAt = new Date(
+                                    Date.now() + 48 * 60 * 60 * 1000,
+                                );
+                                const local = new Date(
+                                    publicAt.getTime() -
+                                        publicAt.getTimezoneOffset() * 60_000,
+                                )
+                                    .toISOString()
+                                    .slice(0, 16);
+
+                                setData('public_at', local);
+                            }}
+                        >
+                            {t('48 hours from now')}
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {t(
+                            'Early access until the public date. Only Founding Circle sees this product until then.',
+                        )}
+                    </p>
+                    <InputError message={errors.public_at} />
+                </div>
+            </div>
+        </AdminPanel>
+    );
+}

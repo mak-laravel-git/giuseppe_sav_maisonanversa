@@ -1,0 +1,524 @@
+import { useForm } from '@inertiajs/react';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AdminPanel } from '@/components/admin/admin-resource-shell';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import type { AdminClubFormValues, ClubFormOptions } from '@/types/club';
+
+type ClubFormProps = {
+    options: ClubFormOptions;
+    club?: AdminClubFormValues;
+    /** POST for create, PUT-via-POST for edit; both carry an image upload. */
+    action: string;
+    method: 'post' | 'put';
+    submitLabel: string;
+};
+
+export function ClubForm({
+    options,
+    club,
+    action,
+    method,
+    submitLabel,
+}: ClubFormProps) {
+    const { t } = useTranslation();
+    const [preview, setPreview] = useState<string | null>(
+        club?.image_url ?? null,
+    );
+
+    const form = useForm({
+        _method: method === 'put' ? 'put' : undefined,
+        name: club?.name ?? '',
+        sports: club?.sports ?? ['padel'],
+        street: club?.street ?? '',
+        postal_code: club?.postal_code ?? '',
+        city: club?.city ?? '',
+        country: club?.country ?? 'BE',
+        lat: club?.lat != null ? String(club.lat) : '',
+        lng: club?.lng != null ? String(club.lng) : '',
+        website: club?.website ?? '',
+        phone: club?.phone ?? '',
+        status: club?.status ?? 'approved',
+        is_partner: club?.is_partner ?? false,
+        is_session_venue: club?.is_session_venue ?? true,
+        show_on_corner_page: club?.show_on_corner_page ?? false,
+        corner_pipeline_status: club?.corner_pipeline_status ?? '',
+        has_corner: club?.has_corner ?? false,
+        corner_published: club?.corner_published ?? false,
+        corner_title: club?.corner_title ?? '',
+        corner_body: club?.corner_body ?? '',
+        corner_location: club?.corner_location ?? '',
+        sort_order: club?.sort_order ?? 0,
+        image: null as File | null,
+        remove_image: false,
+    });
+
+    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        form.post(action, { forceFormData: true });
+    }
+
+    function toggleSport(sport: string) {
+        form.setData(
+            'sports',
+            form.data.sports.includes(sport)
+                ? form.data.sports.filter((item) => item !== sport)
+                : [...form.data.sports, sport],
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <AdminPanel
+                title={t('Location')}
+                description={t(
+                    'Basic details, address, and visibility in the community.',
+                )}
+            >
+                <div className="space-y-5">
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field
+                            label={t('Name')}
+                            error={form.errors.name}
+                            required
+                        >
+                            <Input
+                                value={form.data.name}
+                                onChange={(event) =>
+                                    form.setData('name', event.target.value)
+                                }
+                                required
+                            />
+                        </Field>
+
+                        <Field label={t('Status')} error={form.errors.status}>
+                            <Select
+                                value={form.data.status}
+                                onValueChange={(value) =>
+                                    form.setData('status', value)
+                                }
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {options.statuses.map((option) => (
+                                        <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {t(option.label)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                    </div>
+
+                    <Field label={t('Sports')} error={form.errors.sports}>
+                        <div className="flex flex-wrap gap-x-6 gap-y-3">
+                            {options.sports.map((sport) => (
+                                <label
+                                    key={sport.value}
+                                    className="flex items-center gap-2.5 text-sm"
+                                >
+                                    <Checkbox
+                                        checked={form.data.sports.includes(
+                                            sport.value,
+                                        )}
+                                        onCheckedChange={() =>
+                                            toggleSport(sport.value)
+                                        }
+                                    />
+                                    {t(sport.label)}
+                                </label>
+                            ))}
+                        </div>
+                    </Field>
+
+                    <Field
+                        label={t('Street and number')}
+                        error={form.errors.street}
+                    >
+                        <Input
+                            value={form.data.street}
+                            onChange={(event) =>
+                                form.setData('street', event.target.value)
+                            }
+                        />
+                    </Field>
+
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[8rem_minmax(0,1fr)_5.5rem]">
+                        <Field
+                            label={t('Postal code')}
+                            error={form.errors.postal_code}
+                        >
+                            <Input
+                                value={form.data.postal_code}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'postal_code',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label={t('City')}
+                            error={form.errors.city}
+                            required
+                        >
+                            <Input
+                                value={form.data.city}
+                                onChange={(event) =>
+                                    form.setData('city', event.target.value)
+                                }
+                                required
+                            />
+                        </Field>
+                        <Field label={t('Country')} error={form.errors.country}>
+                            <Input
+                                value={form.data.country}
+                                maxLength={2}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'country',
+                                        event.target.value.toUpperCase(),
+                                    )
+                                }
+                            />
+                        </Field>
+                    </div>
+
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field
+                            label={t('Website')}
+                            error={form.errors.website}
+                        >
+                            <Input
+                                type="url"
+                                value={form.data.website}
+                                placeholder="https://"
+                                onChange={(event) =>
+                                    form.setData('website', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label={t('Phone')}
+                            error={form.errors.phone}
+                        >
+                            <Input
+                                value={form.data.phone}
+                                onChange={(event) =>
+                                    form.setData('phone', event.target.value)
+                                }
+                            />
+                        </Field>
+                    </div>
+
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field
+                            label={t('Latitude')}
+                            error={form.errors.lat}
+                        >
+                            <Input
+                                value={form.data.lat}
+                                onChange={(event) =>
+                                    form.setData('lat', event.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label={t('Longitude')}
+                            error={form.errors.lng}
+                        >
+                            <Input
+                                value={form.data.lng}
+                                onChange={(event) =>
+                                    form.setData('lng', event.target.value)
+                                }
+                            />
+                        </Field>
+                    </div>
+
+                    <Field label={t('Image')} error={form.errors.image}>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                            {preview && (
+                                <img
+                                    src={preview}
+                                    alt=""
+                                    className="size-16 shrink-0 rounded-md object-cover"
+                                />
+                            )}
+                            <div className="min-w-0 flex-1 space-y-3">
+                                <Input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={(event) => {
+                                        const file =
+                                            event.target.files?.[0] ?? null;
+                                        form.setData('image', file);
+                                        form.setData('remove_image', false);
+                                        setPreview(
+                                            file
+                                                ? URL.createObjectURL(file)
+                                                : (club?.image_url ?? null),
+                                        );
+                                    }}
+                                    className="max-w-md"
+                                />
+                                {club?.image_url && (
+                                    <label className="flex items-center gap-2.5 text-sm">
+                                        <Checkbox
+                                            checked={form.data.remove_image}
+                                            onCheckedChange={(checked) => {
+                                                form.setData(
+                                                    'remove_image',
+                                                    checked === true,
+                                                );
+
+                                                if (checked === true) {
+                                                    form.setData('image', null);
+                                                    setPreview(null);
+                                                }
+                                            }}
+                                        />
+                                        {t('Remove image')}
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+                    </Field>
+
+                    <label className="flex items-center gap-2.5 text-sm">
+                        <Checkbox
+                            checked={form.data.is_session_venue}
+                            onCheckedChange={(checked) =>
+                                form.setData(
+                                    'is_session_venue',
+                                    checked === true,
+                                )
+                            }
+                        />
+                        {t('Visible in session search')}
+                    </label>
+                </div>
+            </AdminPanel>
+
+            <AdminPanel
+                title={t('Partner club')}
+                description={t(
+                    'Partner clubs get extra visibility in the Maison network.',
+                )}
+            >
+                <label className="flex items-center gap-2.5 text-sm">
+                    <Checkbox
+                        checked={form.data.is_partner}
+                        onCheckedChange={(checked) =>
+                            form.setData('is_partner', checked === true)
+                        }
+                    />
+                    {t('Partner club')}
+                </label>
+            </AdminPanel>
+
+            <AdminPanel
+                title={t('Club Corner page')}
+                description={t(
+                    'Whether this club appears on the public Club Corner page.',
+                )}
+            >
+                <div className="space-y-5">
+                    <label className="flex items-center gap-2.5 text-sm">
+                        <Checkbox
+                            checked={form.data.show_on_corner_page}
+                            onCheckedChange={(checked) =>
+                                form.setData(
+                                    'show_on_corner_page',
+                                    checked === true,
+                                )
+                            }
+                        />
+                        {t('Show on Club Corner page')}
+                    </label>
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <Field
+                            label={t('Pipeline status')}
+                            error={form.errors.corner_pipeline_status}
+                        >
+                            <Select
+                                value={
+                                    form.data.corner_pipeline_status ||
+                                    '__none'
+                                }
+                                onValueChange={(value) =>
+                                    form.setData(
+                                        'corner_pipeline_status',
+                                        value === '__none' ? '' : value,
+                                    )
+                                }
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder={t('None')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none">
+                                        {t('None')}
+                                    </SelectItem>
+                                    {options.pipelineStatuses.map((option) => (
+                                        <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {t(option.label)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </Field>
+                        <Field
+                            label={t('Order')}
+                            error={form.errors.sort_order}
+                        >
+                            <Input
+                                type="number"
+                                min={0}
+                                value={form.data.sort_order}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'sort_order',
+                                        Number(event.target.value) || 0,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </div>
+                </div>
+            </AdminPanel>
+
+            <AdminPanel
+                title={t('Club Corner map')}
+                description={t(
+                    'Content for the Club Corner card on the public page.',
+                )}
+            >
+                <div className="space-y-5">
+                    <div className="flex flex-wrap gap-x-6 gap-y-3">
+                        <label className="flex items-center gap-2.5 text-sm">
+                            <Checkbox
+                                checked={form.data.has_corner}
+                                onCheckedChange={(checked) =>
+                                    form.setData(
+                                        'has_corner',
+                                        checked === true,
+                                    )
+                                }
+                            />
+                            {t('Has Club Corner')}
+                        </label>
+                        <label className="flex items-center gap-2.5 text-sm">
+                            <Checkbox
+                                checked={form.data.corner_published}
+                                onCheckedChange={(checked) =>
+                                    form.setData(
+                                        'corner_published',
+                                        checked === true,
+                                    )
+                                }
+                            />
+                            {t('Club Corner published')}
+                        </label>
+                    </div>
+                    <Field
+                        label={t('Corner title')}
+                        error={form.errors.corner_title}
+                    >
+                        <Input
+                            value={form.data.corner_title}
+                            onChange={(event) =>
+                                form.setData(
+                                    'corner_title',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field
+                        label={t('Corner text')}
+                        error={form.errors.corner_body}
+                    >
+                        <Textarea
+                            value={form.data.corner_body}
+                            rows={4}
+                            onChange={(event) =>
+                                form.setData('corner_body', event.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field
+                        label={t('Corner location')}
+                        error={form.errors.corner_location}
+                    >
+                        <Input
+                            value={form.data.corner_location}
+                            onChange={(event) =>
+                                form.setData(
+                                    'corner_location',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                </div>
+            </AdminPanel>
+
+            <div className="flex items-center gap-3">
+                <Button type="submit" disabled={form.processing}>
+                    {form.processing && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                    {submitLabel}
+                </Button>
+            </div>
+        </form>
+    );
+}
+
+function Field({
+    label,
+    error,
+    required = false,
+    children,
+}: {
+    label: string;
+    error?: string;
+    required?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <div className="grid min-w-0 gap-2">
+            <Label>
+                {label}
+                {required && <span className="text-destructive"> *</span>}
+            </Label>
+            {children}
+            <InputError message={error} />
+        </div>
+    );
+}

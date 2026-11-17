@@ -1,0 +1,78 @@
+import { BellRing } from 'lucide-react';
+import { toast } from 'sonner';
+import type { NotificationItem } from '@/types/notification';
+
+type Translate = (key: string) => string;
+
+function NotificationToastTitle({
+    payload,
+    eyebrow,
+    t,
+}: {
+    payload: NotificationItem;
+    eyebrow: string;
+    t: Translate;
+}) {
+    const typeLabel = payload.type_label?.trim()
+        ? t(payload.type_label)
+        : null;
+    const title = payload.title?.trim() ? t(payload.title) : eyebrow;
+
+    return (
+        <span className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium tracking-[0.16em] text-white/70 uppercase">
+                {typeLabel ? `${eyebrow} · ${typeLabel}` : eyebrow}
+            </span>
+            <span className="text-sm font-semibold text-white">{title}</span>
+        </span>
+    );
+}
+
+/**
+ * Branded toast for in-app notifications only; per-toast styling keeps the
+ * global richColors look for flash, success and error toasts.
+ */
+export function showNotificationToast(
+    payload: NotificationItem,
+    t: Translate,
+): void {
+    const href = payload.href;
+    const description = payload.message?.trim()
+        ? t(payload.message)
+        : undefined;
+    const actionLabel = payload.link_label?.trim()
+        ? t(payload.link_label)
+        : t('Open');
+
+    toast(
+        <NotificationToastTitle
+            payload={payload}
+            eyebrow={t('New notification')}
+            t={t}
+        />,
+        {
+            id: `inbox-${payload.id}`,
+            description,
+            icon: <BellRing className="size-4 text-gold" />,
+            richColors: false,
+            duration: 8000,
+            style: {
+                background: 'var(--color-choc)',
+                color: '#fff',
+                borderColor: 'var(--color-gold)',
+            },
+            classNames: {
+                toast: 'border-l-4 shadow-xl',
+                description: '!text-white/80',
+                actionButton: '!bg-gold !text-white',
+                closeButton: '!bg-choc2 !text-white !border-gold/40',
+            },
+            action: href
+                ? {
+                      label: actionLabel,
+                      onClick: () => window.location.assign(href),
+                  }
+                : undefined,
+        },
+    );
+}

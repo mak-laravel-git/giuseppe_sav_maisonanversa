@@ -1,0 +1,293 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Locales
+    |--------------------------------------------------------------------------
+    |
+    | Dutch is the source language: every translation key in lang/*.json is the
+    | Dutch copy itself, so `nl` needs no dictionary. The order here is the
+    | order the language switcher renders.
+    |
+    */
+
+    'locales' => ['nl', 'en', 'fr'],
+
+    'default_locale' => 'nl',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fixed names
+    |--------------------------------------------------------------------------
+    |
+    | Proper names of the house: written the same in every language, never
+    | translated by hand, by DeepL or through a dictionary key. "Nº" is the
+    | ordinal sign (U+00BA).
+    |
+    */
+
+    'fixed_names' => [
+        'Maison Anversa',
+        'Heritage Nº 001',
+        'Founding Edition',
+        'Founding Circle',
+        'Heritage Passport',
+        'Heritage Certificate',
+        'Heritage Letter',
+        'Maison Archive',
+        'Salon',
+        'Bureau',
+        'Le Cercle',
+        'Galerie',
+        'Salle Commune',
+        'Bibliothèque',
+        'Atelier',
+        'Club Corner',
+    ],
+
+    /*
+    | Mails and in-app notifications follow the recipient's `users.locale`.
+    | When that is empty or unsupported, they fall back to this locale rather
+    | than the site default.
+    */
+
+    'notification_fallback_locale' => 'nl',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Locale preference cookie
+    |--------------------------------------------------------------------------
+    |
+    | Survives logout and bare `/` visits. Unencrypted so preference can be
+    | read without the app key. Resolution: cookie → session → Accept-Language.
+    |
+    */
+
+    'locale_cookie' => 'maison_locale',
+
+    'locale_cookie_minutes' => (int) env('MAISON_LOCALE_COOKIE_MINUTES', 60 * 24 * 365),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public pages
+    |--------------------------------------------------------------------------
+    |
+    | Slugs are canonical rather than translated, so the same path resolves
+    | under every locale prefix. Route names are `maison.{page}`.
+    |
+    */
+
+    'pages' => [
+        'home' => '',
+        'house' => 'huis',
+        'products' => 'products',
+        'story' => 'story',
+        'circle' => 'circle',
+        'dressing' => 'dressing',
+        'journal' => 'journal',
+        'community' => 'community',
+        'corner' => 'corner',
+        'contact' => 'contact',
+        'privacy' => 'privacy',
+        'terms' => 'terms',
+        'withdrawal' => 'withdrawal',
+        'shipping' => 'shipping',
+        'care' => 'care',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEO defaults
+    |--------------------------------------------------------------------------
+    */
+
+    'seo' => [
+        'image' => '/images/brand/og-maison-anversa.jpg',
+        'image_width' => 1200,
+        'image_height' => 630,
+        'sitemap_cache_seconds' => (int) env('MAISON_SITEMAP_CACHE_SECONDS', 3600),
+        'disallow_paths' => [
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/two-factor-challenge',
+            '/telescope',
+        ],
+        'disallow_locale_segments' => [
+            'admin',
+            'member',
+            'settings',
+            'checkout',
+            'file-upload-demo',
+            'verify',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Live reserved/available/sold-out figures come from each product's
+    | edition_pieces (limited editions) or stock_quantity (simple products).
+    |
+    */
+
+    'checkout' => [
+        /*
+         * Env kill switch for starting purchases. Set MAISON_CHECKOUT_ENABLED=false
+         * to pause "Reserve your number" / Buy site-wide; payments already in
+         * flight (Stripe webhook, success, cancel) keep working. Effective
+         * enablement also requires commerce_settings.purchases_enabled (Admin).
+         */
+        'enabled' => (bool) env('MAISON_CHECKOUT_ENABLED', true),
+        'currency' => 'eur',
+        'hold_minutes' => 15,
+        /*
+         * ISO 3166-1 alpha-2 codes we ship to. Must stay inside the EU — the
+         * approved Terms (Nov 2026) say delivery is within the European Union only.
+         *
+         * @var array<string, string>
+         */
+        'shipping_countries' => [
+            'AT' => 'Austria',
+            'BE' => 'Belgium',
+            'BG' => 'Bulgaria',
+            'HR' => 'Croatia',
+            'CY' => 'Cyprus',
+            'CZ' => 'Czechia',
+            'DK' => 'Denmark',
+            'EE' => 'Estonia',
+            'FI' => 'Finland',
+            'FR' => 'France',
+            'DE' => 'Germany',
+            'GR' => 'Greece',
+            'HU' => 'Hungary',
+            'IE' => 'Ireland',
+            'IT' => 'Italy',
+            'LV' => 'Latvia',
+            'LT' => 'Lithuania',
+            'LU' => 'Luxembourg',
+            'MT' => 'Malta',
+            'NL' => 'Netherlands',
+            'PL' => 'Poland',
+            'PT' => 'Portugal',
+            'RO' => 'Romania',
+            'SK' => 'Slovakia',
+            'SI' => 'Slovenia',
+            'ES' => 'Spain',
+            'SE' => 'Sweden',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registration
+    |--------------------------------------------------------------------------
+    |
+    | Env kill switch for new customer sign-ups. Effective enablement also
+    | requires commerce_settings.registration_enabled (Admin). Login and
+    | existing accounts are unaffected.
+    |
+    */
+    'registration' => [
+        'enabled' => (bool) env('MAISON_REGISTRATION_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Order admin notifications
+    |--------------------------------------------------------------------------
+    |
+    | New paid orders are emailed here in the notification fallback locale (en).
+    |
+    */
+
+    'order_admin_email' => env('ORDER_ADMIN_EMAIL') ?: env('MAIL_FROM_ADDRESS'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Match cards
+    |--------------------------------------------------------------------------
+    |
+    | Story and Post PNGs rendered by resources/match-card/render.mjs (Satori +
+    | resvg). Players are notified once a session with at least `min_players`
+    | confirmed players has ended; sessions that ended longer than
+    | `notify_window_hours` ago are skipped so a deploy never mails old games.
+    | Bump `template_version` after changing the template to drop cached PNGs.
+    |
+    */
+
+    'match_cards' => [
+        'node_binary' => env('MATCH_CARD_NODE', 'node'),
+        'script' => resource_path('match-card/render.mjs'),
+        'disk' => 'local',
+        'min_players' => 2,
+        'notify_window_hours' => 48,
+        'template_version' => 1,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customer returns
+    |--------------------------------------------------------------------------
+    |
+    | Belgian / EU withdrawal: 14 days starting the day after delivery, then
+    | 14 days to ship. Refund due within 14 days of the request. Express
+    | shipping is never auto-refunded (cents reserved for when fees exist).
+    |
+    */
+
+    'returns' => [
+        'withdrawal_days' => 14,
+        'ship_within_days' => 14,
+        'delivery_fallback_days' => 5,
+        'refund_due_days' => 14,
+        'stale_days' => 7,
+        'urgency_days' => 3,
+        'number_prefix' => 'MA-R-',
+        'guest_link_ttl_hours' => 48,
+        'express_shipping_cents' => (int) env('MAISON_EXPRESS_SHIPPING_CENTS', 0),
+        'return_address' => env(
+            'MAISON_RETURN_ADDRESS',
+            'Maison Anversa · Returns · Antwerp, Belgium',
+        ),
+        'max_photos' => 3,
+    ],
+
+    'corner_form_options' => [
+        'court_options' => ['4-6 courts', '7-10 courts', '10+ courts'],
+        'format_options' => [
+            'Format A — Heritage Corner',
+            'Format B — Founding Club Corner',
+            'Not yet decided',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Integration seams
+    |--------------------------------------------------------------------------
+    */
+
+    'mailchimp_form_url' => env('MAISON_MAILCHIMP_FORM_URL', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | TEMPORARY: admin-type users get every permission
+    |--------------------------------------------------------------------------
+    |
+    | While Access Control is out of the UI, flip this on so any account with
+    | `users.type = admin` passes Spatie `permission:*` middleware and sees all
+    | nav items. Super-admin Gate::before still applies separately. Model
+    | policies (e.g. editing another super-admin) are NOT bypassed.
+    |
+    | TURN OFF / DELETE when restoring role-permission management:
+    |   - set MAISON_ADMIN_TYPE_GRANTS_ALL_PERMISSIONS=false, or
+    |   - remove this key + App\Support\AdminTypePermissionBypass + its wires
+    |     in AppServiceProvider and HandleInertiaRequests.
+    |
+    */
+
+    'admin_type_grants_all_permissions' => (bool) env('MAISON_ADMIN_TYPE_GRANTS_ALL_PERMISSIONS', true),
+
+];

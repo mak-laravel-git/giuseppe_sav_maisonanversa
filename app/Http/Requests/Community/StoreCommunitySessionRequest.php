@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Requests\Community;
+
+use App\Enums\ClubStatus;
+use App\Enums\SessionCourtStatus;
+use App\Enums\SessionGender;
+use App\Enums\SessionLevel;
+use App\Enums\SessionSport;
+use App\Models\CommunitySession;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreCommunitySessionRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'sport' => ['required', Rule::enum(SessionSport::class)],
+            'club_id' => [
+                'required',
+                Rule::exists('clubs', 'id')
+                    ->where('status', ClubStatus::Approved->value)
+                    ->where('is_session_venue', true),
+            ],
+            'starts_at' => ['required', 'date', 'after:now'],
+            'duration_minutes' => ['required', 'integer', Rule::in(CommunitySession::DURATION_MINUTES)],
+            'court_status' => ['required', Rule::enum(SessionCourtStatus::class)],
+            'level' => ['required', Rule::enum(SessionLevel::class)],
+            'gender' => ['required', Rule::enum(SessionGender::class)],
+            'capacity' => ['required', 'integer', 'min:2', 'max:8'],
+            'requests_required' => ['sometimes', 'boolean'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('requests_required')) {
+            $this->merge(['requests_required' => false]);
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'club_id.required' => __('Choose a club or corner.'),
+            'club_id.exists' => __('This club has not been approved yet.'),
+            'starts_at.after' => __('Choose a time in the future.'),
+        ];
+    }
+}

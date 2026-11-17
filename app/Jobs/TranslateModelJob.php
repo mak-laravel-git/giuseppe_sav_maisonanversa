@@ -1,0 +1,169 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\Concerns\TranslatesWithDeepL;
+use App\Services\Translation\DeepLTranslator;
+use App\Support\Html\LegalHtml;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Log;
+
+class TranslateModelJob implements ShouldBeUnique, ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 5;
+
+    /** @var list<int> */
+    public array $backoff = [30, 60, 120, 300];
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  list<string>|null  $onlyLocales
+     */
+    public function __construct(
+        public string $modelClass,
+        public int $modelId,
+        public ?array $onlyLocales = null,
+    ) {}
+
+    public function uniqueId(): string
+    {
+        $localeKey = $this->onlyLocales === null
+            ? 'all'
+            : implode(',', $this->onlyLocales);
+
+        return $this->modelClass.':'.$this->modelId.':'.$localeKey;
+    }
+
+    public function handle(DeepLTranslator $translator): void
+    {
+        try {
+            $modelClassIsValid = class_exists($this->modelClass)
+                && is_subclass_of($this->modelClass, Model::class);
+        } catch (\Throwable) {
+            $modelClassIsValid = false;
+        }
+
+        if (! $modelClassIsValid) {
+            Log::warning('TranslateModelJob skipped missing or invalid model class.', [
+                'model_class' => $this->modelClass,
+                'model_id' => $this->modelId,
+            ]);
+
+            return;
+        }
+
+        $model = $this->modelClass::query()->find($this->modelId);
+
+        if ($model === null || ! in_array(TranslatesWithDeepL::class, class_uses_recursive($model), true)) {
+            return;
+        }
+
+        /** @var Model&object{translatableColumns: callable, translations: mixed, translationTargetLocales: callable, translationUsesAutoDetect: callable, translationUsesHtml: callable} $model */
+        $columns = $model->translatableColumns();
+        $targets = collect($model->translationTargetLocales());
+        $usesHtml = $model->translationUsesHtml();
+
+        if ($this->onlyLocales !== null) {
+            $targets = $targets->intersect($this->onlyLocales)->values();
+        }
+
+        if ($columns === [] || $targets->isEmpty()) {
+            return;
+        }
+
+        $sourceLocale = $model->translationUsesAutoDetect()
+            ? null
+            : strtoupper((string) config('maison.default_locale'));
+
+        $model->loadMissing('translations');
+
+        foreach ($targets as $locale) {
+            $pending = [];
+
+            foreach ($columns as $column) {
+                $source = trim((string) ($model->getAttribute($column) ?? ''));
+
+                if ($source === '') {
+                    continue;
+                }
+
+                if ($usesHtml) {
+                    $source = LegalHtml::sanitize($source);
+
+                    if (LegalHtml::isBlank($source)) {
+                        continue;
+                    }
+                }
+
+                $hash = $model->translationSourceHash($column);
+                $existing = $model->translations->first(
+                    fn ($translation): bool => $translation->locale === $locale
+                        && $translation->column === $column
+                        && $translation->source_hash === $hash,
+                );
+
+                if ($existing !== null) {
+                    continue;
+                }
+
+                $pending[$column] = $source;
+            }
+
+            if ($pending === []) {
+                continue;
+            }
+
+            if (! $translator->configured()) {
+                return;
+            }
+
+            try {
+                $translated = $translator->translateMany(
+                    array_values($pending),
+                    $translator->targetLang($locale),
+                    $sourceLocale,
+                    $usesHtml,
+                );
+            } catch (RequestException $exception) {
+                if ($exception->response?->status() === 456) {
+                    $this->release(3600);
+
+                    return;
+                }
+
+                throw $exception;
+            }
+
+            $index = 0;
+
+            foreach (array_keys($pending) as $column) {
+                $value = $translated[$index] ?? $pending[$column];
+
+                if ($usesHtml) {
+                    $value = LegalHtml::sanitize($value);
+                }
+
+                $model->translations()->updateOrCreate(
+                    [
+                        'locale' => $locale,
+                        'column' => $column,
+                    ],
+                    [
+                        'value' => $value,
+                        'source_hash' => $model->translationSourceHash($column),
+                    ],
+                );
+                $index++;
+            }
+
+            $model->unsetRelation('translations');
+            $model->load('translations');
+        }
+    }
+}

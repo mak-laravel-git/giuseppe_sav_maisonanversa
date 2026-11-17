@@ -1,0 +1,824 @@
+<?php
+
+namespace App\Support\Seo;
+
+use App\Enums\FaqContext;
+use App\Models\CommunitySession;
+use App\Models\DressingItem;
+use App\Models\Faq;
+use App\Models\JournalArticle;
+use App\Models\Product;
+use App\Models\SeoMeta;
+use App\Models\SiteSetting;
+use App\Services\Edition\EditionInventory;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+/**
+ * Canonical titles, descriptions, robots, hreflang, and JSON-LD for a request.
+ *
+ * Shared with Inertia so the React head and the Blade fallback cannot drift.
+ *
+ * @phpstan-type HreflangLink array{hreflang: string, href: string}
+ * @phpstan-type SeoDocument array{
+ *     title: string,
+ *     description: string,
+ *     keywords: string|null,
+ *     canonical: string,
+ *     robots: string|null,
+ *     ogType: string,
+ *     ogImage: string,
+ *     ogImageWidth: int|null,
+ *     ogImageHeight: int|null,
+ *     siteName: string,
+ *     locale: string,
+ *     localeAlternates: list<string>,
+ *     hreflang: list<HreflangLink>,
+ *     jsonLd: list<array<string, mixed>>,
+ *     articlePublishedTime: string|null,
+ *     articleModifiedTime: string|null
+ * }
+ */
+final class MaisonSeo
+{
+    /**
+     * @var array<string, array{title: string, description: string}>
+     */
+    private const PAGES = [
+        'home' => [
+            'title' => 'Maison Anversa — European heritage house for sport and lifestyle',
+            'description' => 'A European heritage house, rooted in Antwerp. The Founding Edition is limited to 100 numbered pieces and will never be made again.',
+        ],
+        'house' => [
+            'title' => 'The House — Maison Anversa',
+            'description' => 'Discover the House of Maison Anversa — eight rooms, one heritage story, rooted in Antwerp.',
+        ],
+        'products' => [
+            'title' => 'Products — Maison Anversa',
+            'description' => 'Discover the Maison Anversa collection — Heritage Nº 001 and the next chapters of the house.',
+        ],
+        'story' => [
+            'title' => 'Our Story — Maison Anversa',
+            'description' => 'The story of Maison Anversa — from Antwerp to a European heritage house for sport and lifestyle.',
+        ],
+        'circle' => [
+            'title' => 'Founding Circle — Maison Anversa',
+            'description' => 'Join the Founding Circle — exclusive access, events and the heritage of Maison Anversa.',
+        ],
+        'dressing' => [
+            'title' => 'Dressing Room — Maison Anversa',
+            'description' => 'The Dressing Room of Maison Anversa — curated sportswear and lifestyle, with the same care as our heritage.',
+        ],
+        'journal' => [
+            'title' => 'Journal — Maison Anversa',
+            'description' => 'The Journal of Maison Anversa — stories about craft, Antwerp and the heritage of sport.',
+        ],
+        'community' => [
+            'title' => 'Community — Maison Anversa',
+            'description' => 'The Community of Maison Anversa — sessions, events and a network of like-minded members.',
+        ],
+        'corner' => [
+            'title' => 'Club Corner — Maison Anversa',
+            'description' => 'Club Corner — Maison Anversa\'s partner programme for padel clubs.',
+        ],
+        'contact' => [
+            'title' => 'Contact — Maison Anversa',
+            'description' => 'Contact Maison Anversa — questions about Heritage Nº 001, orders or press.',
+        ],
+        'privacy' => [
+            'title' => 'Privacy Policy — Maison Anversa',
+            'description' => 'Maison Anversa privacy policy — how we process and protect your data.',
+        ],
+        'terms' => [
+            'title' => 'Terms and Conditions — Maison Anversa',
+            'description' => 'Maison Anversa terms and conditions — orders, delivery and warranty.',
+        ],
+        'withdrawal' => [
+            'title' => 'Model withdrawal form — Maison Anversa',
+            'description' => 'Maison Anversa model withdrawal form — cancel your purchase within 14 days.',
+        ],
+        'shipping' => [
+            'title' => 'Shipping & Returns — Maison Anversa',
+            'description' => 'Shipping and returns at Maison Anversa — delivery times, costs and return policy.',
+        ],
+        'care' => [
+            'title' => 'Care & Warranty — Maison Anversa',
+            'description' => 'Care and warranty for Heritage Nº 001 — maintenance, repair and customer service from Maison Anversa.',
+        ],
+    ];
+
+    private const OG_LOCALE = [
+        'nl' => 'nl_BE',
+        'en' => 'en_GB',
+        'fr' => 'fr_BE',
+    ];
+
+    /**
+     * @return array<string, array{title: string, description: string}>
+     */
+    public static function defaults(): array
+    {
+        return self::PAGES;
+    }
+
+    /**
+     * @return SeoDocument
+     */
+    public static function document(?Request $request = null): array
+    {
+        $request ??= request();
+
+        if ($request->attributes->get('maison_seo_error') === true) {
+            $locale = self::locale($request);
+            $origin = self::origin();
+
+            return [
+                'title' => __('Page not found'),
+                'description' => __('This page does not exist. Return to Maison Anversa.'),
+                'keywords' => null,
+                'canonical' => $origin.$request->getPathInfo(),
+                'robots' => 'noindex, nofollow',
+                'ogType' => 'website',
+                'ogImage' => self::absoluteUrl($origin, (string) config('maison.seo.image')),
+                'ogImageWidth' => self::ogImageWidth(),
+                'ogImageHeight' => self::ogImageHeight(),
+                'siteName' => 'Maison Anversa',
+                'locale' => self::OG_LOCALE[$locale] ?? 'nl_BE',
+                'localeAlternates' => [],
+                'hreflang' => [],
+                'jsonLd' => [],
+                'articlePublishedTime' => null,
+                'articleModifiedTime' => null,
+            ];
+        }
+        $locale = self::locale($request);
+        $origin = self::origin();
+        $routeName = Route::currentRouteName();
+        $page = self::pageKey($routeName);
+        $article = self::journalArticle($request, $routeName);
+        $product = self::productForSeo($request, $routeName);
+        $dressingItem = self::dressingItemForSeo($request, $routeName);
+        $sharedSession = self::sharedSessionForSeo($request, $routeName);
+        $indexable = self::isIndexable($routeName, $article, $product, $dressingItem);
+        $canonical = self::canonical($request, $routeName, $locale, $origin, $article, $product, $dressingItem);
+        $copy = $sharedSession !== null
+            ? self::sharedSessionCopy($sharedSession)
+            : self::copy($page, $article, $routeName, $product, $dressingItem);
+        $hreflang = self::hreflang($routeName, $article, $product, $dressingItem);
+        $ogImage = $sharedSession !== null
+            ? route('maison.sessions.card', ['locale' => $locale, 'shareToken' => $sharedSession->share_token, 'format' => 'post'])
+            : self::ogImage($origin, $product);
+        $usingDefaultOg = $ogImage === self::absoluteUrl($origin, (string) config('maison.seo.image'));
+        $ogImageSize = match (true) {
+            $sharedSession !== null => ['width' => 1080, 'height' => 1350],
+            $usingDefaultOg => ['width' => self::ogImageWidth(), 'height' => self::ogImageHeight()],
+            default => ['width' => null, 'height' => null],
+        };
+
+        return [
+            'title' => $copy['title'],
+            'description' => $copy['description'],
+            'keywords' => $copy['keywords'] ?? null,
+            'canonical' => $canonical,
+            'robots' => $indexable ? null : 'noindex, nofollow',
+            'ogType' => $article !== null ? 'article' : 'website',
+            'ogImage' => $ogImage,
+            'ogImageWidth' => $ogImageSize['width'],
+            'ogImageHeight' => $ogImageSize['height'],
+            'siteName' => 'Maison Anversa',
+            'locale' => self::OG_LOCALE[$locale] ?? 'nl_BE',
+            'localeAlternates' => self::localeAlternates($locale),
+            'hreflang' => $hreflang,
+            'jsonLd' => self::jsonLd(
+                $page,
+                $canonical,
+                $copy['title'],
+                $copy['description'],
+                $ogImage,
+                $origin,
+                $article,
+                $locale,
+                $product,
+            ),
+            'articlePublishedTime' => $article?->published_at?->toIso8601String(),
+            'articleModifiedTime' => $article?->updated_at?->toIso8601String(),
+        ];
+    }
+
+    public static function locale(Request $request): string
+    {
+        $locales = config('maison.locales');
+        $segment = $request->segment(1);
+
+        if (is_string($segment) && in_array($segment, $locales, true)) {
+            return $segment;
+        }
+
+        $locale = app()->getLocale();
+
+        return in_array($locale, $locales, true)
+            ? $locale
+            : (string) config('maison.default_locale');
+    }
+
+    private static function origin(): string
+    {
+        return rtrim((string) config('app.url'), '/');
+    }
+
+    private static function pageKey(?string $routeName): ?string
+    {
+        if ($routeName === 'maison.journal.show') {
+            return 'journal';
+        }
+
+        if ($routeName === 'maison.products.show') {
+            return 'products';
+        }
+
+        if ($routeName === 'maison.dressing.show') {
+            return 'dressing';
+        }
+
+        if (is_string($routeName) && str_starts_with($routeName, 'maison.')) {
+            $key = substr($routeName, strlen('maison.'));
+
+            return array_key_exists($key, self::PAGES) ? $key : null;
+        }
+
+        return null;
+    }
+
+    private static function isIndexable(?string $routeName, ?JournalArticle $article, ?Product $product, ?DressingItem $dressingItem = null): bool
+    {
+        if ($routeName === 'maison.journal.show') {
+            return $article !== null;
+        }
+
+        if ($routeName === 'maison.products.show') {
+            return $product !== null;
+        }
+
+        if ($routeName === 'maison.dressing.show') {
+            return $dressingItem !== null;
+        }
+
+        $page = self::pageKey($routeName);
+
+        return $page !== null && array_key_exists($page, self::PAGES);
+    }
+
+    private static function journalArticle(Request $request, ?string $routeName): ?JournalArticle
+    {
+        if ($routeName !== 'maison.journal.show') {
+            return null;
+        }
+
+        $slug = $request->route('slug');
+
+        if (! is_string($slug) || $slug === '') {
+            return null;
+        }
+
+        return JournalArticle::query()
+            ->published()
+            ->where('slug', $slug)
+            ->first();
+    }
+
+    private static function productForSeo(Request $request, ?string $routeName): ?Product
+    {
+        if ($routeName !== 'maison.products.show') {
+            return null;
+        }
+
+        $product = $request->route('product');
+
+        if ($product instanceof Product) {
+            return $product->isVisibleTo($request->user()) ? $product : null;
+        }
+
+        if (! is_string($product) || $product === '') {
+            return null;
+        }
+
+        return Product::query()
+            ->where('slug', $product)
+            ->visibleTo($request->user())
+            ->first();
+    }
+
+    private static function dressingItemForSeo(Request $request, ?string $routeName): ?DressingItem
+    {
+        if ($routeName !== 'maison.dressing.show') {
+            return null;
+        }
+
+        $item = $request->route('dressingItem');
+
+        if ($item instanceof DressingItem) {
+            return $item->is_published ? $item : null;
+        }
+
+        if (! is_string($item) || $item === '') {
+            return null;
+        }
+
+        return DressingItem::query()
+            ->where('slug', $item)
+            ->where('is_published', true)
+            ->first();
+    }
+
+    /**
+     * The public match-card page; cancelled sessions keep the house image.
+     */
+    private static function sharedSessionForSeo(Request $request, ?string $routeName): ?CommunitySession
+    {
+        if ($routeName !== 'maison.sessions.share') {
+            return null;
+        }
+
+        $token = $request->route('shareToken');
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        return CommunitySession::query()
+            ->with('club')
+            ->withCount(['playParticipants', 'joinRequests'])
+            ->where('share_token', $token)
+            ->whereNull('cancelled_at')
+            ->first();
+    }
+
+    /**
+     * @return array{title: string, description: string}
+     */
+    private static function sharedSessionCopy(CommunitySession $session): array
+    {
+        $club = (string) ($session->club?->name ?? __('Session'));
+        $when = $session->starts_at->translatedFormat('l j F Y, H:i');
+        $free = $session->openSlots();
+
+        $places = $free === 1
+            ? __('1 spot left')
+            : __(':count places available', ['count' => $free]);
+
+        return [
+            'title' => __('Session').' · '.$session->sport->label().' — '.$club,
+            'description' => __(':club · :when · :places', [
+                'club' => $club,
+                'when' => $when,
+                'places' => $places,
+            ]),
+        ];
+    }
+
+    /**
+     * @return array{title: string, description: string, keywords?: string|null}
+     */
+    private static function copy(?string $page, ?JournalArticle $article, ?string $routeName, ?Product $product = null, ?DressingItem $dressingItem = null): array
+    {
+        if ($article !== null) {
+            $title = $article->translated('title') ?: (string) $article->title;
+
+            return [
+                'title' => $title.' — Maison Anversa',
+                'description' => $article->translated('excerpt') ?: (string) $article->excerpt,
+            ];
+        }
+
+        if ($product !== null) {
+            $metaTitle = trim($product->translated('meta_title'));
+            $metaDescription = trim($product->translated('meta_description'));
+            $metaKeywords = trim($product->translated('meta_keywords'));
+            $name = $product->translated('name') ?: (string) $product->name;
+
+            return [
+                'title' => $metaTitle !== '' ? $metaTitle : $name.' — Maison Anversa',
+                'description' => $metaDescription !== ''
+                    ? $metaDescription
+                    : ($product->translated('description') ?: (string) $product->description),
+                'keywords' => $metaKeywords !== '' ? $metaKeywords : null,
+            ];
+        }
+
+        if ($dressingItem !== null) {
+            $title = $dressingItem->translated('name') ?: (string) $dressingItem->name;
+
+            return [
+                'title' => $title.' — Maison Anversa',
+                'description' => $dressingItem->translated('description') ?: (string) $dressingItem->description,
+            ];
+        }
+
+        if ($page !== null && isset(self::PAGES[$page])) {
+            $meta = SeoMeta::query()
+                ->where('page_key', $page)
+                ->first();
+
+            if ($meta !== null) {
+                $title = trim((string) $meta->translated('title'));
+                $description = trim((string) $meta->translated('description'));
+
+                // DeepL wins when present; otherwise lang/{locale}.json covers seeded
+                // Dutch defaults so EN/FR storefronts do not leak NL titles.
+                return [
+                    'title' => __($title !== '' ? $title : self::PAGES[$page]['title']),
+                    'description' => __($description !== '' ? $description : self::PAGES[$page]['description']),
+                ];
+            }
+
+            return [
+                'title' => __(self::PAGES[$page]['title']),
+                'description' => __(self::PAGES[$page]['description']),
+            ];
+        }
+
+        return match ($routeName) {
+            'maison.checkout.success' => [
+                'title' => __('Payment confirmed — Maison Anversa'),
+                'description' => __('Your Founding Edition reservation has been received.'),
+            ],
+            'maison.checkout.cancel' => [
+                'title' => __('Payment cancelled — Maison Anversa'),
+                'description' => __('Your payment was cancelled. Nothing was charged.'),
+            ],
+            'maison.verify' => [
+                'title' => __('Authenticity').' — Maison Anversa',
+                'description' => __('Verified Founding Edition piece'),
+            ],
+            'maison.heritage-letter.unsubscribe' => [
+                'title' => __('Unsubscribed').' — Maison Anversa',
+                'description' => __('You will no longer receive the Heritage Letter. You can subscribe again at any time.'),
+            ],
+            default => [
+                'title' => 'Maison Anversa',
+                'description' => __('A European heritage house rooted in Antwerp. We build products for people who understand that the most beautiful things in life take time.'),
+            ],
+        };
+    }
+
+    private static function canonical(
+        Request $request,
+        ?string $routeName,
+        string $locale,
+        string $origin,
+        ?JournalArticle $article,
+        ?Product $product = null,
+        ?DressingItem $dressingItem = null,
+    ): string {
+        if ($routeName === 'maison.journal.show' && $article !== null) {
+            return route('maison.journal.show', [
+                'locale' => $locale,
+                'slug' => $article->slug,
+            ]);
+        }
+
+        if ($routeName === 'maison.products.show' && $product !== null) {
+            return route('maison.products.show', [
+                'locale' => $locale,
+                'product' => $product->slug,
+            ]);
+        }
+
+        if ($routeName === 'maison.dressing.show' && $dressingItem !== null) {
+            return route('maison.dressing.show', [
+                'locale' => $locale,
+                'dressingItem' => $dressingItem->slug,
+            ]);
+        }
+
+        if (is_string($routeName) && $routeName !== '' && Route::has($routeName)) {
+            $parameters = $request->route()?->parameters() ?? [];
+
+            if (isset($parameters['locale'])) {
+                $parameters['locale'] = $locale;
+            }
+
+            try {
+                return route($routeName, $parameters);
+            } catch (\Throwable) {
+                // Fall through to the request URL.
+            }
+        }
+
+        return $origin.$request->getPathInfo();
+    }
+
+    /**
+     * @return list<HreflangLink>
+     */
+    private static function hreflang(?string $routeName, ?JournalArticle $article, ?Product $product = null, ?DressingItem $dressingItem = null): array
+    {
+        if (! is_string($routeName) || ! Route::has($routeName)) {
+            return [];
+        }
+
+        $route = Route::getRoutes()->getByName($routeName);
+
+        if ($route === null || ! str_contains($route->uri(), '{locale}')) {
+            return [];
+        }
+
+        $locales = config('maison.locales');
+        $defaultLocale = config('maison.default_locale');
+        $parameters = [];
+
+        if ($article !== null) {
+            $parameters['slug'] = $article->slug;
+        }
+
+        if ($product !== null) {
+            $parameters['product'] = $product->slug;
+        }
+
+        if ($dressingItem !== null) {
+            $parameters['dressingItem'] = $dressingItem->slug;
+        }
+
+        $links = [];
+
+        foreach ($locales as $locale) {
+            try {
+                $links[] = [
+                    'hreflang' => $locale,
+                    'href' => route($routeName, ['locale' => $locale, ...$parameters]),
+                ];
+            } catch (\Throwable) {
+                return [];
+            }
+        }
+
+        $links[] = [
+            'hreflang' => 'x-default',
+            'href' => route($routeName, ['locale' => $defaultLocale, ...$parameters]),
+        ];
+
+        return $links;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function localeAlternates(string $locale): array
+    {
+        $alternates = [];
+
+        foreach (config('maison.locales') as $candidate) {
+            if ($candidate === $locale) {
+                continue;
+            }
+
+            $alternates[] = self::OG_LOCALE[$candidate] ?? $candidate;
+        }
+
+        return $alternates;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function jsonLd(
+        ?string $page,
+        string $canonical,
+        string $title,
+        string $description,
+        string $ogImage,
+        string $origin,
+        ?JournalArticle $article,
+        string $locale,
+        ?Product $product = null,
+    ): array {
+        if ($page === null && $article === null) {
+            return [];
+        }
+
+        $organizationId = $origin.'/#organization';
+        $websiteId = $origin.'/#website';
+        $settings = SiteSetting::current();
+        $organization = [
+            '@type' => 'Organization',
+            '@id' => $organizationId,
+            'name' => 'Maison Anversa',
+            'url' => $origin,
+            'logo' => $ogImage,
+        ];
+
+        if (filled($settings->phone)) {
+            $organization['telephone'] = $settings->phone;
+        }
+
+        if (filled($settings->email_hello)) {
+            $organization['email'] = $settings->email_hello;
+        }
+
+        if (filled($settings->instagram_url)) {
+            $organization['sameAs'] = [$settings->instagram_url];
+        }
+
+        $graph = [
+            $organization,
+            [
+                '@type' => 'WebSite',
+                '@id' => $websiteId,
+                'name' => 'Maison Anversa',
+                'url' => $origin,
+                'publisher' => ['@id' => $organizationId],
+                'inLanguage' => $locale,
+            ],
+        ];
+
+        if ($article !== null) {
+            $graph[] = [
+                '@type' => 'Article',
+                'headline' => $title,
+                'description' => $description,
+                'image' => $ogImage,
+                'datePublished' => $article->published_at?->toIso8601String(),
+                'dateModified' => $article->updated_at?->toIso8601String(),
+                'author' => [
+                    '@type' => 'Person',
+                    'name' => (string) ($article->author ?: 'Maison Anversa'),
+                ],
+                'publisher' => ['@id' => $organizationId],
+                'mainEntityOfPage' => $canonical,
+                'inLanguage' => $locale,
+            ];
+            $graph[] = [
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Maison Anversa',
+                        'item' => route('maison.home', ['locale' => $locale]),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => __('Journal — Maison Anversa'),
+                        'item' => route('maison.journal', ['locale' => $locale]),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 3,
+                        'name' => $title,
+                        'item' => $canonical,
+                    ],
+                ],
+            ];
+        } else {
+            $graph[] = [
+                '@type' => 'WebPage',
+                'name' => $title,
+                'description' => $description,
+                'url' => $canonical,
+                'isPartOf' => ['@id' => $websiteId],
+                'inLanguage' => $locale,
+            ];
+        }
+
+        if ($page === 'products' && $product !== null) {
+            $graph[] = self::productSchema($canonical, $description, $ogImage, $organizationId, $product);
+            $productFaqs = self::publishedProductFaqItems($product);
+
+            if ($productFaqs !== []) {
+                $graph[] = self::faqSchema($productFaqs);
+            }
+        }
+
+        if ($page === 'contact') {
+            $contactFaqs = self::publishedFaqItems(FaqContext::Contact);
+
+            if ($contactFaqs !== []) {
+                $graph[] = self::faqSchema($contactFaqs);
+            }
+        }
+
+        return [[
+            '@context' => 'https://schema.org',
+            '@graph' => $graph,
+        ]];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function productSchema(
+        string $canonical,
+        string $description,
+        string $ogImage,
+        string $organizationId,
+        Product $product,
+    ): array {
+        $checkout = Product::checkoutShare($product);
+        $snapshot = app(EditionInventory::class)->snapshot($product);
+        $availability = ($snapshot['soldOut'] ?? false)
+            ? 'https://schema.org/SoldOut'
+            : 'https://schema.org/PreOrder';
+
+        $offer = [
+            '@type' => 'Offer',
+            'url' => $canonical,
+            'availability' => $availability,
+            'priceCurrency' => strtoupper((string) ($checkout['currency'] ?: 'eur')),
+        ];
+
+        if ($checkout['amount'] !== '') {
+            $offer['price'] = $checkout['amount'];
+        }
+
+        return [
+            '@type' => 'Product',
+            'name' => $checkout['productName'] !== '' ? $checkout['productName'] : $product->name,
+            'description' => $description,
+            'image' => $ogImage,
+            'brand' => ['@id' => $organizationId],
+            'offers' => $offer,
+        ];
+    }
+
+    /**
+     * @return list<array{question: string, answer: string}>
+     */
+    private static function publishedProductFaqItems(Product $product): array
+    {
+        return array_map(
+            fn (array $faq): array => [
+                'question' => $faq['question'],
+                'answer' => $faq['answer'],
+            ],
+            $product->publishedFaqShare(),
+        );
+    }
+
+    /**
+     * @return list<array{question: string, answer: string}>
+     */
+    private static function publishedFaqItems(FaqContext $context): array
+    {
+        return Faq::publishedFor($context)
+            ->map(fn (Faq $faq): array => [
+                'question' => $faq->translated('question'),
+                'answer' => $faq->translated('answer'),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<array{question: string, answer: string}>  $items
+     * @return array<string, mixed>
+     */
+    private static function faqSchema(array $items): array
+    {
+        return [
+            '@type' => 'FAQPage',
+            'mainEntity' => array_map(fn (array $item): array => [
+                '@type' => 'Question',
+                'name' => $item['question'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => $item['answer'],
+                ],
+            ], $items),
+        ];
+    }
+
+    private static function ogImage(string $origin, ?Product $product): string
+    {
+        $productImage = $product?->resolvedOgImageUrl();
+
+        if (filled($productImage)) {
+            return self::absoluteUrl($origin, (string) $productImage);
+        }
+
+        return self::absoluteUrl($origin, (string) config('maison.seo.image'));
+    }
+
+    private static function ogImageWidth(): ?int
+    {
+        $width = config('maison.seo.image_width');
+
+        return is_int($width) ? $width : null;
+    }
+
+    private static function ogImageHeight(): ?int
+    {
+        $height = config('maison.seo.image_height');
+
+        return is_int($height) ? $height : null;
+    }
+
+    private static function absoluteUrl(string $origin, string $path): string
+    {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return $origin.'/'.ltrim($path, '/');
+    }
+}

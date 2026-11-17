@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Responses;
+
+use App\Models\User;
+use App\Services\Auth\PostLoginRedirectService;
+use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
+use Symfony\Component\HttpFoundation\Response;
+
+class RegisterResponse implements RegisterResponseContract
+{
+    public function __construct(public PostLoginRedirectService $redirects) {}
+
+    public function toResponse($request): Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Your account has been created.'),
+        ]);
+
+        if ($request->header('X-Inertia') || ! $request->wantsJson()) {
+            return redirect()->to($this->redirects->intendedUrlFor($user, $request));
+        }
+
+        return new JsonResponse('', 201);
+    }
+}

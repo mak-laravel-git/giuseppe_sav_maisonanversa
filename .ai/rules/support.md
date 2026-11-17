@@ -1,0 +1,43 @@
+---
+paths:
+  - app/Support/PassportPresenter.php
+  - app/Support/ClubDirectory.php
+  - app/Http/Controllers/Maison/VerificationController.php
+  - app/Support/HomeHeroPresenter.php
+  - app/Support/SessionFeed.php
+  - app/Support/MatchScore.php
+  - app/Support/MatchCardPresenter.php
+---
+
+# Support
+
+## Founding Circle / Heritage Passport is a composite, not a model
+"Founding Circle" and "Heritage Passport" have no dedicated passport tables. They're derived at read time from: the Spatie `founding-circle` role on `User` (checked via `User::isFoundingCircle()`), an approved `FoundingCircleClaim` and/or `PassportPresenter::heritageOrder()` (latest paid/shipped/delivered founding order with `edition_number`). Enrollment is automatic when Heritage Nº 001 payment succeeds: `OrderFulfillment` assigns `founding-circle` and writes a private register row for the picked number. Don't build a `FoundingCircleMember` or `HeritagePassport` model.
+
+Deliberately out of scope, don't "fix" these: no CMS editor for the Passport's 4 page bodies (hardcoded in `PassportPresenter`); no tiers/points/loyalty mechanics (binary membership is intentional). Member nav shows Heritage, Passport, the Circle card, and Register listing only for Founding Circle members. Lidpaspoort stays for every customer. There is no racket-registration screen.
+
+## Member Passport (Lidpaspoort) is separate from Heritage Passport
+`MemberPassportPresenter` on `member.lidpaspoort` is the digital activity passport for all customers: membership status, derived badges, upcoming sessions/events. It must stay separate from `PassportPresenter` / `member.passport`, which is the Founding Circle Heritage artefact only. Nav shows **Lidpaspoort** for every member; **Digitaal Heritage Passport** stays Circle-only.
+
+An admin-assigned `founding-circle` role holder with no qualifying order yet passes `EnsureFoundingCircle` middleware but has no passport/heritage/card data — `DashboardController::heritage/passport/circle` return a null prop (not a 404) and the React pages (`member/heritage.tsx`, `member/passport.tsx`, `member/circle.tsx`) render `MemberEmptyState` for that case.
+
+## Public verify page holder comes from order or approved claim
+`maison.verify` authenticates an `EditionPiece` by `verification_token`. Holder payload resolves from the linked order (`order.name` + `order.user`) or, when `order_id` is null (claim-only allocation), the latest approved `FoundingCircleClaim` user. Do not expose email. Pass English `statusLabel` keys for frontend `t()`, localize dates with `translatedFormat`, and keep `productName` on `product->translated('name')`.
+
+## Founding Circle / Passport __() and t() keys use English source text
+lang/nl.json and lang/fr.json are keyed by the English source string (i18next fallback pattern), so __()/t() calls here must pass the exact English phrase. OpsController::circleShow() benefits and pdf/passport.blade.php must use the English dictionary keys. Passing Dutch as the key silently falls back to Dutch on every locale with no error — ShellTranslationKeysTest scans resources/js/pages/member/** for this class of bug on the frontend, but there is no equivalent static check for backend __() calls, so double-check new backend strings against the dictionary keys by hand.
+
+## No map APIs for club directory in V1
+Member club directory is list + profile + search filters only. Do not add Mapbox/Google Maps or geocoding to the storefront club UX until the client approves API/cost. `clubs.lat/lng` may exist in the database but are not rendered on member pages in V1.
+
+## Hero tagline is the stored brand line, never translated
+HomeHeroPresenter::toStorefront() returns `$hero->tagline` as stored (the source column), never a locale translation, even when en/fr rows exist. Eyebrow, titles, counter lines, and button labels follow the storefront locale (through translated() and then the lang dictionaries). Do not put Dutch words in the seeded tagline: the Dutch "Gebouwd voor generaties" is only a marquee item, which is translated per locale.
+
+## SessionFeed cards accept guest viewers
+toCard and present take nullable User. Guests get can_join when the session is still open; player/host names and avatars are redacted (initials only). joinable() excludes full sessions for the homepage.
+
+## Session match results follow FIP/ITF scoring
+One official match per session; the submitter picks who played (others sit out). Padel is doubles only; tennis is singles or doubles (SessionSport::matchTypes()). Formats (SessionMatchFormat) follow FIP/ITF: sets to 6 by 2 with a 7-point tie-break at 6-6, short sets to 4, super tie-break to 10 replacing the 3rd set. App\Support\MatchScore is the single source of truth for validation, winner and notation (6-4, 6-7(5), [10-7]); resources/js/lib/match-score.ts only mirrors it for live feedback. A session with fewer confirmed players than the sport's minimum can be finished without a result.
+
+## Match card privacy uses the Private label
+When show_first_name_on_cards is false, MatchCardPresenter sets first_name to __('Privé') (Private in EN). Call players($session, $locale) / payload(..., $locale) so the label follows the URL language. Last names never appear.

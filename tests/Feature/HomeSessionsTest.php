@@ -1,0 +1,184 @@
+<?php
+
+use App\Models\Club;
+use App\Models\CommunitySession;
+use App\Models\CommunitySessionParticipant;
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('the home page includes upcoming joinable sessions for guests', function () {
+    $host = User::factory()->create([
+        'name' => 'Hidden Host',
+        'first_name' => 'Hidden',
+        'last_name' => 'Host',
+    ]);
+    $open = CommunitySession::factory()->create([
+        'host_id' => $host->id,
+        'starts_at' => now()->addDays(2),
+        'capacity' => 4,
+    ]);
+    CommunitySessionParticipant::factory()->create([
+        'community_session_id' => $open->id,
+        'user_id' => $host->id,
+    ]);
+
+    CommunitySession::factory()->cancelled()->create([
+        'starts_at' => now()->addDays(3),
+    ]);
+    CommunitySession::factory()->past()->create();
+
+    $this->get('/nl')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('maison/home')
+            ->has('upcomingSessions', 1)
+            ->where('upcomingSessions.0.id', (string) $open->id)
+            ->where('upcomingSessions.0.can_join', true)
+            ->where('upcomingSessions.0.is_host', false)
+            ->where('upcomingSessions.0.is_joined', false)
+            ->where('upcomingSessions.0.host.name', '')
+            ->where('upcomingSessions.0.players.0.name', '')
+            ->where('upcomingSessions.0.players.0.initials', 'HH')
+            ->where('openSessionsThisWeek', 1)
+        );
+});
+
+test('the home page omits full sessions and caps the list at three', function () {
+    CommunitySession::factory()->count(5)->create([
+        'starts_at' => now()->addDay(),
+        'capacity' => 4,
+    ]);
+
+    $full = CommunitySession::factory()->create([
+        'starts_at' => now()->addHours(6),
+        'capacity' => 2,
+    ]);
+    $players = User::factory()->count(2)->create();
+    foreach ($players as $player) {
+        CommunitySessionParticipant::factory()->create([
+            'community_session_id' => $full->id,
+            'user_id' => $player->id,
+        ]);
+    }
+
+    $this->get('/nl')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('maison/home')
+            ->has('upcomingSessions', 3)
+            ->where('openSessionsThisWeek', 5)
+            ->where(
+                'upcomingSessions',
+                fn ($sessions): bool => collect($sessions)
+                    ->pluck('id')
+                    ->doesntContain((string) $full->id),
+            )
+        );
+});
+
+test('openSessionsThisWeek only counts joinable sessions in the next seven days', function () {
+    CommunitySession::factory()->create([
+        'starts_at' => now()->addDays(3),
+        'capacity' => 4,
+    ]);
+    CommunitySession::factory()->create([
+        'starts_at' => now()->addDays(10),
+        'capacity' => 4,
+    ]);
+
+    $this->get('/nl')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('openSessionsThisWeek', 1)
+            ->has('upcomingSessions', 2)
+        );
+});
+
+test('verified members can join a session listed on the home page', function () {
+    $host = User::factory()->create();
+    $guest = User::factory()->create();
+    $club = Club::factory()->create();
+
+    $session = CommunitySession::factory()->create([
+        'host_id' => $host->id,
+        'club_id' => $club->id,
+        'starts_at' => now()->addDay(),
+        'capacity' => 4,
+    ]);
+
+    CommunitySessionParticipant::factory()->create([
+        'community_session_id' => $session->id,
+        'user_id' => $host->id,
+    ]);
+
+    $this->actingAs($guest)
+        ->post(route('community.sessions.join', [
+            'locale' => 'nl',
+            'communitySession' => $session->id,
+        ]))
+        ->assertRedirect();
+
+    expect($session->participants()->where('user_id', $guest->id)->exists())->toBeTrue()
+        ->and($session->joinRequests()->where('user_id', $guest->id)->exists())->toBeFalse();
+});
+
+test('the home page returns an empty upcomingSessions list when none are joinable', function () {
+    CommunitySession::factory()->cancelled()->create([
+        'starts_at' => now()->addDays(2),
+    ]);
+    CommunitySession::factory()->past()->create();
+
+    $this->get('/nl')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('maison/home')
+            ->has('upcomingSessions', 0)
+            ->where('openSessionsThisWeek', 0)
+        );
+});
+
+test('the home sessions section matches the PDF placement copy and card', function () {
+    $homeSessions = file_get_contents(resource_path('js/components/maison/home/home-sessions.tsx'));
+    $homeCard = file_get_contents(resource_path('js/components/maison/home/home-session-card.tsx'));
+    $homePage = file_get_contents(resource_path('js/pages/maison/home.tsx'));
+    $sessionCard = file_get_contents(resource_path('js/components/maison/community/sessions/session-card.tsx'));
+
+    expect($homePage)
+        ->toContain('HomeSessions')
+        ->toContain('upcomingSessions')
+        ->toContain('openSessionsThisWeek')
+        ->toContain('<HomeStory />')
+        ->toContain('<HomeSessions');
+
+    expect(strpos($homePage, '<HomeStory />'))
+        ->toBeLessThan(strpos($homePage, '<HomeSessions'));
+
+    expect(strpos($homePage, '<HomeSessions'))
+        ->toBeLessThan(strpos($homePage, '<HomeAntwerp'));
+
+    expect($homeSessions)
+        ->toContain('HomeSessionCard')
+        ->toContain('After the coffee, the court.')
+        ->toContain('Community · Sessions')
+        ->toContain('+ Plan a session')
+        ->toContain('View all sessions')
+        ->toContain('useResumePendingSessionJoin')
+        ->toContain('border-dashed')
+        ->toContain('No open sessions at the moment')
+        ->toContain('Plan the first session of the week.')
+        ->not->toContain('max-w-[520px]')
+        ->not->toContain("from '@/components/maison/community/sessions/session-card'");
+
+    expect($homeCard)
+        ->toContain("t('Join')")
+        ->toContain('in ✓')
+        ->toContain('storePendingSessionJoin')
+        ->toContain("openAuth('register')");
+
+    expect($sessionCard)
+        ->toContain('storePendingSessionJoin')
+        ->toContain('useOptionalShellActions')
+        ->toContain('ShareSessionButton')
+        ->toContain("t('Join')")
+        ->toContain('Organised by');
+});

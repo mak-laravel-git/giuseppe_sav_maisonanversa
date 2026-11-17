@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Http\Responses;
+
+use App\Models\User;
+use App\Services\Auth\PostLoginRedirectService;
+use App\Services\Newsletter\HeritageLetterSubscription;
+use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse as TwoFactorLoginResponseContract;
+use Symfony\Component\HttpFoundation\Response;
+
+class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
+{
+    public function __construct(
+        public PostLoginRedirectService $redirects,
+        public HeritageLetterSubscription $heritageLetter,
+    ) {}
+
+    public function toResponse($request): Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $this->heritageLetter->claimForUser($user);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('You have been signed in successfully.'),
+        ]);
+
+        if ($request->header('X-Inertia') || ! $request->wantsJson()) {
+            return redirect()->to($this->redirects->intendedUrlFor($user, $request));
+        }
+
+        return new JsonResponse('', 204);
+    }
+}

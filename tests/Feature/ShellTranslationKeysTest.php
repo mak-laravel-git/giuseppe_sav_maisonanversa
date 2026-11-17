@@ -1,0 +1,191 @@
+<?php
+
+use App\Enums\ProductSectionKey;
+use Illuminate\Support\Facades\File;
+
+/*
+ * The dictionaries are keyed by their English source string, so a typo in a `t()`
+ * call is invisible at runtime: i18next falls back to the key and the English text
+ * renders on a French page. These tests read the keys back out of the components
+ * and fail if any of them is missing from a dictionary.
+ */
+
+/**
+ * Brand vocabulary that reads the same in all three languages.
+ *
+ * The prototype left these in English even inside Dutch and French sentences
+ * ("Membre du Founding Circle"), so they carry no dictionary entry and falling
+ * back to the key is the correct result rather than a missing translation.
+ */
+const MAISON_UNTRANSLATED_BRAND_TERMS = [
+    'Atelier',
+    'Club Corner',
+    'Founding Circle',
+    'Founding Edition',
+    'Heritage Certificate',
+    'Heritage Letter',
+    'Heritage Nº 001',
+    'Heritage Passport',
+    'Journal',
+    'Maison Anversa',
+];
+
+/**
+ * Every literal translation key used by the Maison components.
+ *
+ * @return array<string, list<string>> keys, grouped by the file that uses them
+ */
+function maisonTranslationKeys(): array
+{
+    $keys = [];
+
+    $files = collect(File::allFiles(resource_path('js')))
+        ->filter(function ($file): bool {
+            $path = str_replace('\\', '/', $file->getPathname());
+
+            return str_contains($path, '/maison')
+                || str_contains($path, '/pages/admin/products/')
+                || str_contains($path, '/pages/admin/legal-pages/')
+                || str_contains($path, '/pages/member/')
+                || str_contains($path, '/components/member')
+                || str_contains($path, '/components/admin/product')
+                || str_contains($path, '/components/admin/legal')
+                || str_contains($path, '/components/admin/form-stepper')
+                || str_contains($path, '/components/admin/repeater-field');
+        })
+        ->filter(fn ($file) => in_array($file->getExtension(), ['ts', 'tsx'], true));
+
+    foreach ($files as $file) {
+        $contents = $file->getContents();
+        $found = [];
+
+        /*
+         * `t('…')` with a single-quoted literal. Keys carrying an apostrophe are
+         * escaped in source as \', which JSON stores unescaped.
+         */
+        preg_match_all("/\bt\(\s*'((?:[^'\\\\]|\\\\.)*)'/", $contents, $calls);
+
+        foreach ($calls[1] as $key) {
+            $found[] = stripcslashes($key);
+        }
+
+        preg_match_all('/\bt\(\s*"((?:[^"\\\\]|\\\\.)*)"/', $contents, $doubleQuoted);
+
+        foreach ($doubleQuoted[1] as $key) {
+            $found[] = stripcslashes($key);
+        }
+
+        /*
+         * Labels and headings in the navigation manifest are passed to `t()`
+         * indirectly, so the literal never appears beside a `t(` to be matched.
+         */
+        preg_match_all("/(?:label|heading|description):\s*'((?:[^'\\\\]|\\\\.)*)'/", $contents, $manifest);
+
+        foreach ($manifest[1] as $key) {
+            $found[] = stripcslashes($key);
+        }
+
+        preg_match_all('/(?:addLabel|emptyLabel)="((?:[^"\\\\]|\\\\.)*)"/', $contents, $repeater);
+
+        foreach ($repeater[1] as $key) {
+            $found[] = stripcslashes($key);
+        }
+
+        $found = array_values(array_filter(
+            array_unique($found),
+            fn (string $key): bool => $key !== '',
+        ));
+
+        if ($found !== []) {
+            $keys[$file->getFilename()] = $found;
+        }
+    }
+
+    // Read English source keys from the enum source — calling label() would
+    // return the translated NL string under the site default locale.
+    $enumSource = File::get(app_path('Enums/ProductSectionKey.php'));
+    preg_match_all("/__\(\s*'((?:[^'\\\\]|\\\\.)*)'/", $enumSource, $enumKeys);
+    $keys['ProductSectionKey'] = array_values(array_unique(array_map(
+        'stripcslashes',
+        $enumKeys[1],
+    )));
+
+    return $keys;
+}
+
+test('the components use translation keys at all', function () {
+    $keys = maisonTranslationKeys();
+
+    expect($keys)->not->toBeEmpty();
+    expect(array_merge(...array_values($keys)))->not->toBeEmpty();
+});
+
+test('every translation key the components use exists in the dictionary', function (string $locale) {
+    $dictionary = json_decode(
+        File::get(lang_path("{$locale}.json")),
+        true,
+        flags: JSON_THROW_ON_ERROR
+    );
+
+    $missing = [];
+
+    foreach (maisonTranslationKeys() as $file => $keys) {
+        foreach ($keys as $key) {
+            if (in_array($key, MAISON_UNTRANSLATED_BRAND_TERMS, true)) {
+                continue;
+            }
+
+            if (! array_key_exists($key, $dictionary)) {
+                $missing[] = "{$file}: {$key}";
+            }
+        }
+    }
+
+    expect($missing)->toBe([], "Keys with no {$locale} translation:\n".implode("\n", $missing));
+})->with(['nl', 'fr']);
+
+test('the brand allowlist only covers terms the dictionary really omits', function (string $locale) {
+    $dictionary = json_decode(
+        File::get(lang_path("{$locale}.json")),
+        true,
+        flags: JSON_THROW_ON_ERROR
+    );
+
+    $translatedAfterAll = array_values(array_filter(
+        MAISON_UNTRANSLATED_BRAND_TERMS,
+        fn (string $term) => array_key_exists($term, $dictionary)
+    ));
+
+    expect($translatedAfterAll)->toBe([]);
+})->with(['nl', 'fr']);
+
+test('the passport Download PDF button translates in every locale', function (string $locale, string $expected) {
+    $dictionary = json_decode(
+        File::get(lang_path("{$locale}.json")),
+        true,
+        flags: JSON_THROW_ON_ERROR
+    );
+
+    $source = File::get(resource_path('js/pages/member/passport.tsx'));
+
+    expect($source)->toContain("t('Download PDF')")
+        ->and($dictionary)->toHaveKey('Download PDF')
+        ->and($dictionary['Download PDF'])->toBe($expected);
+})->with([
+    'nl' => ['nl', 'PDF downloaden'],
+    'fr' => ['fr', 'Télécharger le PDF'],
+]);
+
+test('no translation key carries markup, because the dictionary holds plain text', function () {
+    $withMarkup = [];
+
+    foreach (maisonTranslationKeys() as $file => $keys) {
+        foreach ($keys as $key) {
+            if (preg_match('/<[a-z\/]/i', $key) === 1) {
+                $withMarkup[] = "{$file}: {$key}";
+            }
+        }
+    }
+
+    expect($withMarkup)->toBe([]);
+});

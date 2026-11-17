@@ -1,0 +1,182 @@
+import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
+import { ProductGallery } from '@/components/maison/product/product-gallery';
+import { SectionIcon } from '@/components/maison/product/section-icon';
+import type { OrderProductContext } from '@/components/maison/shell/shell-actions';
+import { useShellActions } from '@/components/maison/shell/shell-actions';
+import { MaisonButton } from '@/components/maison/ui/maison-button';
+import { Section, Wrap } from '@/components/maison/ui/section';
+import { useCheckoutDisplay } from '@/hooks/use-checkout-display';
+import { useLocale } from '@/hooks/use-locale';
+import { usePurchasesPaused } from '@/hooks/use-purchases-paused';
+import { FOUNDING_PRODUCT_SLUG } from '@/lib/maison-navigation';
+import type { Edition } from '@/types/edition';
+import type { ProductPageData } from '@/types/product';
+import { productSectionItems } from '@/types/product';
+
+export function ProductDetail({
+    edition,
+    product,
+    checkout,
+}: {
+    edition: Edition;
+    product: ProductPageData;
+    /** Per-product checkout context; omitted falls back to the founding SKU. */
+    checkout?: OrderProductContext;
+}) {
+    const { t } = useTranslation();
+    const { locale } = useLocale();
+    const { foundingRegister } = usePage().props;
+    const { openPurchase, openNewsletter } = useShellActions();
+    const purchasesPaused = usePurchasesPaused();
+    const isFoundingProduct = product.slug === FOUNDING_PRODUCT_SLUG;
+    const { priceLabel, deliveryLabel } = useCheckoutDisplay(checkout);
+    const isSoldOut = edition.soldOut || product.status === 'archived';
+    const isComingSoon = product.status === 'coming_soon';
+    const canReserve = !isSoldOut && !isComingSoon;
+    const specs = productSectionItems(product.sections, 'specs');
+    const guarantees = productSectionItems(product.sections, 'guarantees');
+
+    return (
+        <Section tone="cream" className="py-18">
+            <Wrap>
+                <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-20">
+                    <ProductGallery
+                        gallery={product.gallery}
+                        productName={product.name}
+                    />
+
+                    <div>
+                        {product.eyebrow ? (
+                            <span className="mb-3 block font-sans text-[9px] tracking-[0.28em] text-gold uppercase">
+                                {product.eyebrow}
+                            </span>
+                        ) : null}
+                        <p className="mb-1.5 font-serif text-[clamp(28px,3.5vw,48px)] leading-[1.1] font-medium [&_em]:text-gold [&_em]:italic">
+                            {product.name}
+                        </p>
+                        <div className="mb-1 font-serif text-[40px] leading-none font-light text-choc lining-nums">
+                            {priceLabel}
+                        </div>
+                        <div className="mb-7 flex items-center gap-3">
+                            <span
+                                aria-hidden="true"
+                                className="size-1.5 shrink-0 rounded-full bg-gold"
+                            />
+                            <p className="font-sans text-[9px] tracking-[0.2em] text-stone uppercase">
+                                {edition.available} {t('Numbers still')}{' '}
+                                {t('available')}
+                                {deliveryLabel ? <> · {deliveryLabel}</> : null}
+                            </p>
+                        </div>
+                        {product.description ? (
+                            <p className="mb-7 border-b border-gold/20 pb-7 text-[15px] leading-[1.85] text-choc3">
+                                {product.description}
+                            </p>
+                        ) : null}
+
+                        {specs.length > 0 ? (
+                            <div className="mb-8 flex flex-col">
+                                {specs.map((spec) => (
+                                    <div
+                                        key={spec.id}
+                                        className="flex items-baseline justify-between gap-4 border-b border-gold/12 py-3"
+                                    >
+                                        <span className="font-sans text-[9px] tracking-[0.22em] text-stone uppercase">
+                                            {spec.title}
+                                        </span>
+                                        <span className="text-right font-serif text-[15px] font-medium text-choc">
+                                            {spec.body}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+
+                        {isFoundingProduct && canReserve ? (
+                            <div className="mb-6 border border-gold/30 p-4">
+                                <p className="font-sans text-[9px] tracking-[0.22em] text-gold uppercase">
+                                    {t('Your place in the Register')}
+                                </p>
+                                <p className="mt-2 text-sm leading-relaxed text-choc3">
+                                    {t(
+                                        'Every owner of Heritage Nº 001 is inscribed. You choose your own number at checkout.',
+                                    )}
+                                </p>
+                                <p className="mt-3 font-serif text-lg text-choc">
+                                    {t(
+                                        '{{count}} of {{total}} places remaining',
+                                        {
+                                            count: foundingRegister.remaining_count,
+                                            total: foundingRegister.places_total,
+                                        },
+                                    )}
+                                </p>
+                                <Link
+                                    href={`/${locale}/founding-circle/register`}
+                                    className="mt-3 inline-flex font-sans text-[10px] tracking-[0.16em] text-gold uppercase"
+                                >
+                                    {t('View the Register')}
+                                </Link>
+                            </div>
+                        ) : null}
+
+                        {canReserve ? (
+                            <>
+                                <MaisonButton
+                                    variant="filled"
+                                    block
+                                    disabled={purchasesPaused}
+                                    onClick={() => openPurchase(checkout)}
+                                    className="mb-3"
+                                >
+                                    {`${t('Reserve Your Number —')} ${priceLabel}`}
+                                </MaisonButton>
+                                {purchasesPaused ? (
+                                    <p className="mb-3 text-center font-sans text-[10px] tracking-[0.12em] text-choc3">
+                                        {t(
+                                            'Reservations are temporarily paused.',
+                                        )}
+                                    </p>
+                                ) : null}
+                            </>
+                        ) : (
+                            <MaisonButton
+                                variant="filled"
+                                block
+                                onClick={openNewsletter}
+                                className="mb-3"
+                            >
+                                {t('Sign up for the Heritage Letter')}
+                            </MaisonButton>
+                        )}
+                        {canReserve && (
+                            <MaisonButton
+                                variant="outlineChoc"
+                                block
+                                onClick={openNewsletter}
+                            >
+                                {t('Sign up for the Heritage Letter')}
+                            </MaisonButton>
+                        )}
+
+                        {guarantees.length > 0 ? (
+                            <div className="mt-6 grid grid-cols-1 gap-4 border-t border-gold/15 pt-6 sm:grid-cols-3">
+                                {guarantees.map((item) => (
+                                    <div key={item.id} className="text-center">
+                                        <div className="mb-1.5 text-lg text-gold2">
+                                            <SectionIcon icon={item.icon} />
+                                        </div>
+                                        <div className="font-sans text-[9px] leading-[1.5] tracking-[0.15em] text-stone uppercase">
+                                            {item.title}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            </Wrap>
+        </Section>
+    );
+}

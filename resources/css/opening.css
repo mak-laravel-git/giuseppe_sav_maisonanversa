@@ -1,0 +1,996 @@
+/*
+ * The opening: one scene. The house draws itself, the door opens, the eight
+ * windows light up one by one. Under the house come the wordmark, the register
+ * and the room list.
+ *
+ * Ported from the client's reference pages (opening-reference.html and
+ * house-lit-reference.html, v2; the register column, the room list and the window
+ * links follow opening-reference-v3.html). There is no room view and no room
+ * photo: a window or a room name links straight to the room's page. Everything is
+ * scoped under .ma-opening and the generic class names are prefixed `op-`, so none
+ * of it can collide with the Tailwind utilities used elsewhere. The SVG artwork
+ * keeps the reference's own class names (mh-*, lw0-7), which only exist inside
+ * that artwork.
+ *
+ * The right light: <html data-light="morning|afternoon|evening|night"> is set by
+ * the inline script in app.blade.php before the first paint, so there is no
+ * flash of the wrong colours. Only colours change; no images are involved.
+ */
+
+/* ---------- repeat visits: the opening plays once per session ---------- */
+html[data-opening='seen'] .ma-opening {
+    display: none;
+}
+
+/* ---------- the shell ---------- */
+.ma-opening {
+    --ivory: #f3ebe3;
+    --choc: #291c18;
+    --muted: #6e5644;
+    --line: #d8c9b6;
+    --ph: #ede3d8;
+    --hover: #efe4d8;
+    --bgimg: #f3ebe3;
+    --selbg: #291c18;
+    --selfg: #f3ebe3;
+    --selbd: #291c18;
+    --taupe: #8d705a;
+    --gold: #b2915c;
+    /*
+     * How lit a window is at rest. By day (morning, afternoon) it is a soft
+     * reflection, about 25%; hover, focus or a tap lights it fully (.is-on).
+     * --lit-key is the level of the two windows that burn all night.
+     */
+    --lit: 0.25;
+    --lit-key: var(--lit);
+    /* the house's line colour: softer than the chocolate used for text */
+    --ink: #5a4739;
+
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background-color: var(--ivory);
+    background-image: var(--bgimg);
+    color: var(--choc);
+    font-family: Montserrat, system-ui, sans-serif;
+    transition:
+        background-color 1.2s ease,
+        color 1.2s ease;
+}
+
+.ma-opening *,
+.ma-opening *::before,
+.ma-opening *::after {
+    box-sizing: border-box;
+}
+
+:root[data-light='morning'] .ma-opening {
+    --bgimg: linear-gradient(200deg, #f7e6cc 0%, #f3ebe3 45%, #f1e8de 100%);
+}
+
+:root[data-light='evening'] .ma-opening {
+    --ivory: #291c18;
+    --choc: #eadcc8;
+    --muted: #cdbba3;
+    --line: rgb(234 220 200 / 0.25);
+    --ph: #33241f;
+    --hover: rgb(234 220 200 / 0.08);
+    --bgimg: linear-gradient(180deg, #1f1613 0%, #291c18 45%, #3a2920 100%);
+    --selbg: #0f0a08;
+    --selfg: #f3ebe3;
+    --selbd: #f3ebe3;
+    --lit: 0.95;
+    --ink: #eadcc8;
+}
+
+:root[data-light='night'] .ma-opening {
+    --ivory: #17100e;
+    --choc: #c9b9a2;
+    --muted: #a8977f;
+    --line: rgb(201 185 162 / 0.22);
+    --ph: #241a16;
+    --hover: rgb(201 185 162 / 0.08);
+    --bgimg: #17100e;
+    --selbg: #0f0a08;
+    --selfg: #f3ebe3;
+    --selbd: #f3ebe3;
+    /* only the balcony window (IV) and one dormer (VII) are still lit */
+    --lit: 0;
+    --lit-key: 0.9;
+    --ink: #c9b9a2;
+}
+
+.ma-opening svg g {
+    transition: opacity 1.2s ease;
+}
+
+.op-scroll {
+    position: relative;
+    min-height: 100%;
+    overflow: hidden;
+}
+
+.op-stage {
+    position: relative;
+    z-index: 1;
+}
+
+/* leaving: fades away over the home page that is already rendered behind it */
+.ma-opening.is-leaving {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+}
+
+/* sunlight / moon, by mood */
+.op-sun {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+}
+
+:root[data-light='morning'] .op-sun {
+    right: -160px;
+    top: 40px;
+    width: 760px;
+    height: 760px;
+    background: radial-gradient(
+        circle,
+        rgb(242 200 130 / 0.5) 0%,
+        rgb(242 200 130 / 0.18) 40%,
+        rgb(242 200 130 / 0) 68%
+    );
+}
+
+:root[data-light='afternoon'] .op-sun {
+    left: 50%;
+    top: -260px;
+    margin-left: -360px;
+    width: 720px;
+    height: 520px;
+    background: radial-gradient(
+        circle,
+        rgb(255 250 240 / 0.9) 0%,
+        rgb(255 250 240 / 0) 70%
+    );
+}
+
+:root[data-light='evening'] .op-sun {
+    left: 50%;
+    top: 520px;
+    margin-left: -450px;
+    width: 900px;
+    height: 420px;
+    background: radial-gradient(
+        ellipse,
+        rgb(201 165 106 / 0.22) 0%,
+        rgb(201 165 106 / 0) 70%
+    );
+}
+
+:root[data-light='night'] .op-sun {
+    right: 12%;
+    top: 70px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #e9e0cf;
+    box-shadow: 0 0 40px 10px rgb(233 224 207 / 0.18);
+}
+
+/* ---------- top bar: language switcher (left) and Skip (right) ---------- */
+.op-top {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 8px;
+    /* One thin bar with its own background: nothing scrolls under the controls. */
+    background: color-mix(in srgb, var(--ivory) 96%, transparent);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(6px);
+}
+
+/* language switcher: left of the bar, Skip on the right */
+.op-lang {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.op-lang button,
+.op-skip {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 12px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--muted);
+    font:
+        500 11px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+        color 0.2s,
+        border-color 0.2s;
+}
+
+.op-lang button:hover,
+.op-skip:hover {
+    color: var(--choc);
+    border-color: var(--line);
+}
+
+.op-lang button[aria-current='true'] {
+    color: var(--choc);
+    border-color: var(--gold);
+}
+
+.op-lang button:focus-visible,
+.op-skip:focus-visible,
+.op-page:focus-visible,
+.op-replay:focus-visible {
+    outline: 2px solid var(--choc);
+    outline-offset: 2px;
+}
+
+/* Keyboard focus only (never on a mouse click): 2 px taupe, as in the reference. */
+.op-num:focus-visible,
+.op-cta:focus-visible,
+.hw-btn:focus-visible,
+.op-rl a:focus-visible {
+    outline: 2px solid #8d705a;
+    outline-offset: 2px;
+}
+
+/*
+ * ---------- the scene: one column ----------
+ * Top to bottom: greeting, the house, the wordmark and edition, the register
+ * with its two buttons, then the list of rooms.
+ */
+.op-scene {
+    max-width: 1100px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: 64px clamp(16px, 4vw, 56px) 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+}
+
+/* Sized so the whole house fits the screen height. */
+.op-house {
+    position: relative;
+    width: min(440px, 78vw, calc((100vh - 220px) * 0.8317));
+    width: min(440px, 78vw, calc((100dvh - 220px) * 0.8317));
+    min-width: 240px;
+}
+
+.mh-house {
+    width: 100%;
+    aspect-ratio: 662 / 796;
+    height: auto;
+    display: block;
+    overflow: visible;
+}
+
+/* under the house: wordmark, edition, limit. Fades in once the door is open. */
+.op-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+}
+
+.op-identity h1 {
+    margin: 0;
+}
+
+.ma-wordmark {
+    width: min(320px, 100%);
+    height: auto;
+    display: block;
+}
+
+.ma-wordmark path {
+    fill: var(--choc);
+}
+
+.op-greeting {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.op-g {
+    display: none;
+}
+
+:root:not([data-light]) .op-g-afternoon,
+:root[data-light='morning'] .op-g-morning,
+:root[data-light='afternoon'] .op-g-afternoon,
+:root[data-light='evening'] .op-g-evening,
+:root[data-light='night'] .op-g-night {
+    display: inline;
+}
+
+.op-edition {
+    margin: 0;
+    font-family: Baskervville, Georgia, serif;
+    font-style: italic;
+    font-size: clamp(18px, 2.1vw, 23px);
+    color: var(--choc);
+}
+
+.op-limit {
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--choc);
+}
+
+.op-replay {
+    align-self: flex-start;
+    background: none;
+    border: 0;
+    padding: 12px 0;
+    min-height: 44px;
+    font:
+        500 11px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* ---------- the animation ---------- */
+.mh-ln {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 0.4;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: ma-draw 0.95s cubic-bezier(0.55, 0.1, 0.35, 1) forwards;
+}
+
+.mh-b1 {
+    animation-delay: 0.15s;
+}
+.mh-b2 {
+    animation-delay: 0.3s;
+}
+.mh-b3 {
+    animation-delay: 0.45s;
+}
+.mh-b4 {
+    animation-delay: 0.6s;
+}
+.mh-b5 {
+    animation-delay: 0.75s;
+}
+.mh-b6 {
+    animation-delay: 0.9s;
+}
+.mh-b7 {
+    animation-delay: 1.05s;
+}
+
+.mh-fill {
+    fill: var(--ink);
+    opacity: 0;
+    animation: ma-fade 0.8s ease-out 1.5s forwards;
+}
+
+.mh-glow {
+    opacity: 0;
+    animation: ma-fade 1s ease-out 2.25s forwards;
+}
+
+.mh-spill {
+    animation-delay: 2.6s;
+}
+
+.mh-door {
+    transform-box: fill-box;
+    animation: ma-open 1.15s cubic-bezier(0.55, 0, 0.2, 1) 2.25s forwards;
+}
+
+.mh-door-l {
+    transform-origin: left center;
+}
+.mh-door-r {
+    transform-origin: right center;
+}
+
+/* the windows light up one by one after the door opens, I → VIII */
+.mh-win {
+    opacity: 0;
+    animation: ma-fade 1.1s ease-out forwards;
+}
+
+.mh-w0 {
+    animation-delay: 2.9s;
+}
+.mh-w1 {
+    animation-delay: 3.12s;
+}
+.mh-w2 {
+    animation-delay: 3.34s;
+}
+.mh-w3 {
+    animation-delay: 3.56s;
+}
+.mh-w4 {
+    animation-delay: 3.78s;
+}
+.mh-w5 {
+    animation-delay: 4s;
+}
+.mh-w6 {
+    animation-delay: 4.22s;
+}
+.mh-w7 {
+    animation-delay: 4.44s;
+}
+
+/*
+ * Every window is a room button, so each one keeps a light of its own: a soft
+ * reflection by day, fully lit in the evening, and at night only the balcony
+ * window (IV, lw3) and one dormer (VII, lw6). Hover, focus or a tap lights any
+ * window fully; the quick fade overrides the slow one set on every svg group.
+ */
+.mh-house [class^='lw'] {
+    opacity: var(--lit);
+    transition: opacity 0.3s ease;
+}
+
+.mh-house .lw3,
+.mh-house .lw6 {
+    opacity: var(--lit-key);
+}
+
+.mh-house [class^='lw'].is-on {
+    opacity: 1;
+}
+
+.op-in {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: ma-rise 0.9s ease-out forwards;
+}
+
+/* After the rise finishes, keep full opacity (avoids a washed-out end state). */
+.op-edition.op-in,
+.op-limit.op-in {
+    animation-fill-mode: forwards;
+}
+
+.op-t0 {
+    animation-delay: 0.2s;
+}
+.op-t1 {
+    animation-delay: 3s;
+}
+.op-t2 {
+    animation-delay: 3.35s;
+}
+.op-t3 {
+    animation-delay: 3.7s;
+}
+
+/*
+ * Under the house, in order: the wordmark (3s) and the edition (3.35s) as the
+ * door finishes opening, then the register (3.7s), then the list of rooms.
+ */
+.op-register.op-in {
+    animation-delay: 3.7s;
+}
+.op-rooms.op-in {
+    animation-delay: 4.4s;
+}
+
+@keyframes ma-draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+@keyframes ma-fade {
+    to {
+        opacity: 1;
+    }
+}
+@keyframes ma-open {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0.12);
+    }
+}
+@keyframes ma-rise {
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* end state: tap to finish, reduced motion */
+.is-done .mh-ln,
+.is-done .mh-fill,
+.is-done .mh-glow,
+.is-done .op-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+}
+
+.is-done .mh-win {
+    animation: none;
+    opacity: 1;
+}
+
+.is-done .mh-door {
+    animation: none;
+    transform: scaleX(0.12);
+}
+
+/*
+ * ---------- a real link over each window ----------
+ * Every window of the house is a link straight to its room's page. Hover or
+ * keyboard focus lights it (the scene toggles .is-on on the artwork) and shows a
+ * small label above it.
+ */
+.hw-btn {
+    position: absolute;
+    display: block;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.hw-btn:hover,
+.hw-btn:focus-visible,
+.hw-btn.hov {
+    z-index: 2;
+}
+
+.op-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: var(--choc);
+    color: var(--ivory);
+    font:
+        500 10px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.hw-btn:hover .op-tip,
+.hw-btn:focus-visible .op-tip,
+.hw-btn.hov .op-tip {
+    opacity: 1;
+}
+
+/*
+ * ---------- the room list: the register's own column ----------
+ * Numeral, name, label, gold arrow. The whole row is a link; hovering it (or a
+ * window) lights the row and the matching window.
+ */
+.op-rooms {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 8px 0 0;
+    /* the reference's own line height, not the site body's 1.7 */
+    line-height: normal;
+}
+
+.op-k {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+}
+
+.op-hint {
+    margin: 8px 0 18px;
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.op-rl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+}
+
+.op-rl a {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-height: 52px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: var(--choc);
+}
+
+.op-rl a:hover,
+.op-rl a.hov {
+    background: rgb(178 145 92 / 0.1);
+}
+
+.op-rl-n {
+    width: 40px;
+    font-family: Baskervville, Georgia, serif;
+    font-size: 15px;
+    color: var(--muted);
+}
+
+.op-rl-nm {
+    flex: 1;
+    font-family: Baskervville, Georgia, serif;
+    font-size: 21px;
+}
+
+.op-rl-lb {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.op-rl-ar {
+    color: var(--gold);
+    font-size: 14px;
+}
+
+.op-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 30px;
+    text-decoration: none;
+    font:
+        600 12px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.op-cta-1 {
+    background: var(--choc);
+    color: var(--ivory);
+    border: 0;
+}
+
+.op-cta-2 {
+    background: none;
+    border: 1px solid var(--choc);
+    color: var(--choc);
+}
+
+/* purchases paused on the server: the reservation button is off */
+.op-cta:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/*
+ * ---------- the register: ONE centred column of 600 px ----------
+ * Title, legend, grid, the chosen number and the buttons all sit in it; the room
+ * list below uses the same column.
+ */
+.op-register {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 8px 0 12px;
+    /* the reference's own line height, not the site body's 1.7 */
+    line-height: normal;
+}
+
+.op-reg-head {
+    border-top: 1px solid var(--line);
+    padding-top: 36px;
+    text-align: center;
+}
+
+.op-reg-head h2 {
+    margin: 0 0 14px;
+    font-family: Baskervville, Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(28px, 3vw, 36px);
+}
+
+.op-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 22px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 22px;
+}
+
+.op-legend span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.op-sw {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+}
+
+.op-sw-a {
+    border: 1px solid #b9a48c;
+    background: #fbf7f2;
+}
+.op-sw-r {
+    background: var(--gold);
+}
+.op-sw-archive {
+    border: 1px dashed #8d705a;
+    background: #ede3d8;
+}
+
+/* ten per row on every screen: 10 × 10, gap 6 px, tiles ± 55 × 44 px in 600 px */
+.op-numbers {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.op-num {
+    min-width: 0;
+    aspect-ratio: 5 / 4;
+    min-height: 44px;
+    border: 1px solid #d8c9b6;
+    background: #fbf7f2;
+    color: #291c18;
+    font:
+        500 13px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* labels such as EXC007ST are long, and ten tiles share one row */
+.op-num-long {
+    font-size: 9px;
+    letter-spacing: 0;
+}
+
+.op-num:hover {
+    border-color: var(--gold);
+}
+
+.op-num[aria-pressed='true'] {
+    background: var(--selbg);
+    border-color: var(--selbd);
+    color: var(--selfg);
+}
+
+.op-num:disabled {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #291c18;
+    cursor: default;
+}
+
+/* Maison Archive: taupe dashed outline, not the reserved gold, not selectable */
+.op-num.op-num-archive:disabled {
+    background: #ede3d8;
+    border: 1px dashed #8d705a;
+    color: #6e5644;
+}
+
+/*
+ * The pager: only there when the edition has more than 100 numbers. It is built
+ * from the register's own parts: page numbers look like tiles, Previous and Next
+ * like the outlined buttons, and the current page is dark, like a chosen number.
+ */
+.op-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+}
+
+.op-page {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: #fbf7f2;
+    color: #291c18;
+    font:
+        500 13px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+}
+
+.op-page:hover:not(:disabled) {
+    border-color: var(--gold);
+}
+
+.op-page[aria-current='page'] {
+    background: var(--selbg);
+    border-color: var(--selbd);
+    color: var(--selfg);
+}
+
+/* Previous / Next: the outlined button, smaller */
+.op-page-step {
+    padding: 0 18px;
+    background: none;
+    border-color: var(--choc);
+    color: var(--choc);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.op-page:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.op-page-gap {
+    min-width: 24px;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* "Numbers 101–200 of 250", on its own line under the buttons */
+.op-page-range {
+    flex-basis: 100%;
+    margin: 8px 0 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.op-picked {
+    margin: 22px 0 0;
+    width: 100%;
+    text-align: center;
+    font-family: Baskervville, Georgia, serif;
+    font-size: 22px;
+}
+
+.op-ctas {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- phone: the scene is tighter under the house ---------- */
+@media (max-width: 639px) {
+    .op-scene {
+        min-height: 0;
+        padding: 64px 16px 48px;
+        gap: 16px;
+    }
+
+    .op-house {
+        width: min(440px, 78vw, calc((100vh - 150px) * 0.8317));
+        width: min(440px, 78vw, calc((100dvh - 150px) * 0.8317));
+        min-width: 200px;
+    }
+
+    /* the column keeps 24 px from each screen edge, as in the reference */
+    .op-register,
+    .op-rooms {
+        padding-inline: 8px;
+    }
+
+    .op-register {
+        padding-bottom: 24px;
+    }
+}
+
+/*
+ * ---------- small phone: the full 10 × 10 register on one screen ----------
+ * Compact tiles (± 33 × 34 px, gap 3 px, 10.5 px numbers); the room labels hide,
+ * numeral, name and arrow stay.
+ */
+@media (max-width: 560px) {
+    .op-reg-head {
+        padding-top: 28px;
+    }
+
+    .op-numbers {
+        gap: 3px;
+    }
+
+    .op-num {
+        aspect-ratio: auto;
+        min-height: 0;
+        height: 34px;
+        font-size: 10.5px;
+        letter-spacing: 0;
+    }
+
+    .op-num-long {
+        font-size: 6.5px;
+    }
+
+    .op-rl-lb {
+        display: none;
+    }
+}
+
+/* ---------- reduced motion: everything in its end state, no animation ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .mh-ln,
+    .mh-fill,
+    .mh-glow,
+    .op-in {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        stroke-dashoffset: 0;
+    }
+
+    .mh-win {
+        animation: none;
+        opacity: 1;
+    }
+
+    .mh-door {
+        animation: none;
+        transform: scaleX(0.12);
+    }
+}

@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Http\Controllers\Member;
+
+use App\Enums\RegisterVisibility;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Member\UpdateRegisterListingRequest;
+use App\Services\FoundingCircle\FoundingCircleRegistrar;
+use App\Support\FoundingCircleRegisterPresenter;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class RegisterListingController extends Controller
+{
+    public function edit(Request $request, string $locale, FoundingCircleRegisterPresenter $presenter): Response
+    {
+        $listing = $presenter->listingPreview($request->user());
+
+        return Inertia::render('member/register-listing', [
+            'listing' => $listing,
+            'canManage' => (bool) ($listing['inscribed'] ?? false),
+        ]);
+    }
+
+    public function update(
+        UpdateRegisterListingRequest $request,
+        string $locale,
+        FoundingCircleRegistrar $registrar,
+    ): RedirectResponse {
+        $registrar->updateListing(
+            $request->user(),
+            RegisterVisibility::from($request->validated('visibility')),
+            $request->boolean('consent'),
+        );
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Changes appear in the register immediately.')]);
+
+        return back();
+    }
+}

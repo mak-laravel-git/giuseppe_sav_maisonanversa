@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\OrderStatus;
+use Database\Factories\OrderFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+class Order extends Model
+{
+    /** @use HasFactory<OrderFactory> */
+    use HasFactory;
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = [
+        'user_id',
+        'product_id',
+        'edition_piece_id',
+        'status',
+        'name',
+        'email',
+        'locale',
+        'phone',
+        'shipping_line1',
+        'shipping_line2',
+        'shipping_city',
+        'shipping_postal_code',
+        'shipping_country',
+        'edition_number',
+        'monogram',
+        'gift_wrap',
+        'gift_message',
+        'currency',
+        'amount',
+        'stripe_checkout_session_id',
+        'stripe_payment_intent_id',
+        'processing_at',
+        'shipped_at',
+        'delivered_at',
+        'delivered_on',
+        'return_deadline_at',
+        'follow_up_sent_at',
+    ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => OrderStatus::class,
+            'edition_number' => 'integer',
+            'gift_wrap' => 'boolean',
+            'amount' => 'decimal:2',
+            'processing_at' => 'datetime',
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'delivered_on' => 'date',
+            'return_deadline_at' => 'datetime',
+            'follow_up_sent_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Product, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return BelongsTo<EditionPiece, $this>
+     */
+    public function editionPiece(): BelongsTo
+    {
+        return $this->belongsTo(EditionPiece::class);
+    }
+
+    /**
+     * @return HasMany<OrderStatusEvent, $this>
+     */
+    public function statusEvents(): HasMany
+    {
+        return $this->hasMany(OrderStatusEvent::class)->orderBy('created_at');
+    }
+
+    /**
+     * @return HasMany<Payment, $this>
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->latest('id');
+    }
+
+    /**
+     * @return HasOne<Payment, $this>
+     */
+    public function latestPayment(): HasOne
+    {
+        return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    /**
+     * @return HasMany<OrderReturn, $this>
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class);
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->status->isFulfillment();
+    }
+
+    public function isShipped(): bool
+    {
+        return $this->shipped_at !== null
+            || in_array($this->status, [OrderStatus::Shipped, OrderStatus::Delivered], true);
+    }
+
+    /**
+     * @return array{line1: string, line2: string|null, city: string, postal_code: string, country: string}
+     */
+    public function shippingAddress(): array
+    {
+        return [
+            'line1' => (string) ($this->shipping_line1 ?? ''),
+            'line2' => $this->shipping_line2,
+            'city' => (string) ($this->shipping_city ?? ''),
+            'postal_code' => (string) ($this->shipping_postal_code ?? ''),
+            'country' => (string) ($this->shipping_country ?? ''),
+        ];
+    }
+
+    public function reference(): string
+    {
+        return 'MA-'.($this->created_at?->format('Y') ?? now()->format('Y')).'-'.str_pad((string) $this->id, 4, '0', STR_PAD_LEFT);
+    }
+}

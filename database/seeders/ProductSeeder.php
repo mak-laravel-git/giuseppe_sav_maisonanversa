@@ -1,0 +1,268 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Enums\ProductSectionKey;
+use App\Enums\ProductStatus;
+use App\Enums\ProductType;
+use App\Models\Product;
+use App\Models\ProductSection;
+use Illuminate\Database\Seeder;
+
+class ProductSeeder extends Seeder
+{
+    /**
+     * The product's name, as the opening prints it under the wordmark. "Nº" is the
+     * ordinal sign (U+00BA). The name is the same in every language, so it is also
+     * stored as the English and French translation, instead of waiting for DeepL.
+     */
+    public const FOUNDING_NAME = 'Heritage Nº 001 · Founding Edition';
+
+    /**
+     * Seed the Founding Edition catalog product with storefront content.
+     * Stripe IDs are created on first purchase or when Stripe keys are present.
+     */
+    public function run(): void
+    {
+        $product = Product::query()->updateOrCreate(
+            ['slug' => Product::FOUNDING_SLUG],
+            [
+                'name' => self::FOUNDING_NAME,
+                'type' => ProductType::LimitedEdition,
+                'status' => ProductStatus::Active,
+                'amount' => '249.00',
+                'currency' => 'eur',
+                'edition_total' => 100,
+                'archive_edition_numbers' => [1],
+                'is_published' => true,
+                'grants_founding_circle' => true,
+                'expected_delivery_label' => 'Q1 2027 — ONDER VOORBEHOUD VAN PRODUCTIE',
+                'eyebrow' => 'Maison Anversa · Founding Edition',
+                'hero_eyebrow' => 'Founding Edition · 100 Genummerde Stuks',
+                'hero_subtitle' => 'Founding Edition 2026',
+                'description' => 'De Founding Edition is beperkt tot 100 genummerde stuks en wordt nooit opnieuw gemaakt.',
+                'sort_order' => 0,
+                'gallery' => [
+                    'heritage-001-front',
+                    'heritage-001-detail-gravure',
+                    'atelier-workshop',
+                    'heritage-001-lifestyle-court',
+                ],
+            ],
+        );
+
+        foreach ($product->translationTargetLocales() as $locale) {
+            $product->translations()->updateOrCreate(
+                ['locale' => $locale, 'column' => 'name'],
+                [
+                    'value' => self::FOUNDING_NAME,
+                    'source_hash' => $product->translationSourceHash('name'),
+                ],
+            );
+        }
+
+        foreach (self::sections() as $key => $definition) {
+            $section = ProductSection::query()->updateOrCreate(
+                ['product_id' => $product->id, 'key' => $key],
+                [
+                    'eyebrow' => $definition['eyebrow'] ?? null,
+                    'heading' => $definition['heading'] ?? null,
+                    'subheading' => $definition['subheading'] ?? null,
+                    'intro' => $definition['intro'] ?? null,
+                    'image_key' => $definition['image_key'] ?? null,
+                    'is_visible' => true,
+                    'sort_order' => ProductSectionKey::from($key)->defaultSortOrder(),
+                ],
+            );
+
+            $section->items()->delete();
+
+            foreach ($definition['items'] ?? [] as $sort => $item) {
+                $section->items()->create([
+                    'number_label' => $item['number_label'] ?? null,
+                    'icon' => $item['icon'] ?? null,
+                    'title' => $item['title'] ?? null,
+                    'body' => $item['body'] ?? null,
+                    'sort_order' => $sort,
+                ]);
+            }
+        }
+
+        foreach (self::faqs() as $sort => $faq) {
+            $product->faqs()->updateOrCreate(
+                ['question' => $faq['question']],
+                [
+                    'answer' => $faq['answer'],
+                    'sort_order' => $sort,
+                    'is_published' => true,
+                ],
+            );
+        }
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private static function sections(): array
+    {
+        return [
+            ProductSectionKey::Specs->value => [
+                'items' => [
+                    ['title' => 'Frame', 'body' => '3K Carbon'],
+                    ['title' => 'Kern', 'body' => 'EVA Soft'],
+                    ['title' => 'Greep', 'body' => 'Echt leder, handafgewerkt'],
+                    ['title' => 'Afwerking', 'body' => 'Matte premium — Crème / Chocolade'],
+                    ['title' => 'Gewicht', 'body' => 'Finale specificatie volgt na prototypecontrole'],
+                    ['title' => 'Nummering', 'body' => 'Individueel gestempeld 001–100'],
+                    ['title' => 'Editie', 'body' => 'Founding Edition — éénmalig'],
+                ],
+            ],
+            ProductSectionKey::Includes->value => [
+                'items' => [
+                    ['title' => 'Heritage Nº 001 racket (individueel genummerd)'],
+                    ['title' => 'Heritage Certificate met zegel van de oprichter'],
+                    ['title' => 'Heritage Passport'],
+                    ['title' => 'Welkomstkaart & brief van de oprichter'],
+                    ['title' => 'Founding Circle uitnodiging'],
+                    ['title' => 'Premium canvas stofzak'],
+                ],
+            ],
+            ProductSectionKey::Guarantees->value => [
+                'items' => [
+                    ['icon' => '◇', 'title' => 'Veilige reservering'],
+                    ['icon' => '◆', 'title' => 'Levering in de EU'],
+                    ['icon' => '◈', 'title' => 'Authenticiteit gegarandeerd'],
+                ],
+            ],
+            ProductSectionKey::Unboxing->value => [
+                'eyebrow' => 'Wat in de Doos Zit',
+                'heading' => 'De volledige Heritage Ervaring',
+                'intro' => 'Elke Heritage Nº 001 wordt geleverd als één complete ervaring. De volgorde is intentioneel.',
+                'items' => [
+                    [
+                        'number_label' => '01',
+                        'title' => 'Welkomstkaart',
+                        'body' => 'A5 · 400g katoenpapier · Letterpress · Handtekening oprichter',
+                    ],
+                    [
+                        'number_label' => '02',
+                        'title' => 'Brief van de oprichter',
+                        'body' => 'Het verhaal van Maison Anversa. Persoonlijk, authentiek.',
+                    ],
+                    [
+                        'number_label' => '03',
+                        'title' => 'Heritage Passport',
+                        'body' => 'Vegetaal gelooide lederen omslag',
+                    ],
+                    [
+                        'number_label' => '04',
+                        'title' => 'Heritage Certificate',
+                        'body' => 'A5 · Letterpress + goudfolie · Zegel van de oprichter · Editienummer',
+                    ],
+                    [
+                        'number_label' => '05',
+                        'title' => 'Founding Circle',
+                        'body' => 'Uitnodiging voor de permanente gemeenschap van de eerste 100.',
+                    ],
+                    [
+                        'number_label' => '06',
+                        'title' => 'Heritage Nº 001',
+                        'body' => 'Premium canvas stofzak · MA monogram · Individueel genummerd',
+                    ],
+                ],
+            ],
+            ProductSectionKey::Craft->value => [
+                'eyebrow' => 'Vakmanschap',
+                'heading' => 'Elk detail',
+                'subheading' => 'met opzet.',
+                'intro' => 'Heritage Nº 001 wordt gebouwd met materialen die zelden in padel voorkomen. Niet voor de show — voor hoe het voelt in de hand en hoe het veroudert door de jaren.',
+                'image_key' => 'atelier-workshop',
+                'items' => [
+                    [
+                        'number_label' => '01',
+                        'title' => '3K Carbon Frame',
+                        'body' => 'De meest veeleisende weave in de industrie. Licht, stijf, en zichtbaar vakmanschap in elk raster.',
+                    ],
+                    [
+                        'number_label' => '02',
+                        'title' => 'Echt lederen greep',
+                        'body' => 'Handafgewerkt, vegetaal gelooid. Wordt mooier met gebruik — synthetisch kan dat niet.',
+                    ],
+                    [
+                        'number_label' => '03',
+                        'title' => 'EVA Soft Kern',
+                        'body' => 'Een balans tussen comfort en controle. Gekalibreerd voor zowel gevoel als kracht.',
+                    ],
+                    [
+                        'number_label' => '04',
+                        'title' => 'Goudfolie & Letterpress',
+                        'body' => 'Certificaat en paspoort gedrukt met traditionele technieken. Geen laserprint.',
+                    ],
+                ],
+            ],
+            ProductSectionKey::Trust->value => [
+                'items' => [
+                    ['icon' => '◈', 'title' => 'Genummerd 001–100'],
+                    ['icon' => '✓', 'title' => 'Echtheids-certificaat'],
+                    ['icon' => '◆', 'title' => 'Ontworpen in Antwerpen'],
+                    ['icon' => '★', 'title' => 'Lid van de Founding Circle'],
+                ],
+            ],
+            ProductSectionKey::Service->value => [
+                'eyebrow' => 'Service & Veiligheid',
+                'heading' => 'Met zorg geleverd.',
+                'intro' => 'Elke zending is verzekerd en traceerbaar. Retour binnen 14 dagen na levering.',
+                'items' => [
+                    [
+                        'icon' => '◆',
+                        'title' => 'Verzending',
+                        'body' => 'Levering binnen de EU is inbegrepen. Elke zending is verzekerd en traceerbaar.',
+                    ],
+                    [
+                        'icon' => '↺',
+                        'title' => '14 dagen retour',
+                        'body' => 'Je hebt 14 dagen na levering om je aankoop te herroepen, zonder opgave van reden.',
+                    ],
+                    [
+                        'icon' => '◇',
+                        'title' => 'Veilig reserveren',
+                        'body' => 'Je nummer wordt vastgelegd na bevestiging. De Founding Edition wordt in één beperkte productieronde vervaardigd — volledig transparant.',
+                    ],
+                ],
+            ],
+            ProductSectionKey::Faq->value => [
+                'eyebrow' => 'Vragen',
+                'heading' => 'Veelgestelde vragen.',
+            ],
+            ProductSectionKey::Related->value => [
+                'eyebrow' => 'Volgende Hoofdstukken',
+                'heading' => 'De volgende nummers.',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{question: string, answer: string}>
+     */
+    private static function faqs(): array
+    {
+        return [
+            [
+                'question' => 'Wanneer wordt mijn racket geleverd?',
+                'answer' => 'De Founding Edition wordt in één beperkte productieronde van 100 genummerde stuks vervaardigd en wordt nooit opnieuw gemaakt. Verwachte levering is Q1 2027 — onder voorbehoud van productie.',
+            ],
+            [
+                'question' => 'Hoe weet ik dat mijn nummer uniek is?',
+                'answer' => 'Elk racket is individueel gestempeld (001–100) en vergezeld van een Heritage Certificate met hetzelfde nummer en het zegel van de oprichter. Het nummer staat ook in ons register.',
+            ],
+            [
+                'question' => 'Kan ik mijn nummer kiezen?',
+                'answer' => 'Binnen de beschikbare nummers kun je een voorkeur opgeven bij reservering. Leden van de Founding Circle hebben voorrang op lagere nummers.',
+            ],
+            [
+                'question' => 'Wordt Heritage Nº 001 opnieuw gemaakt?',
+                'answer' => 'Nee. De Founding Edition wordt niet herhaald — 100 stuks, eenmalig. Heritage Nº 001 kan daarna als reguliere collectie beschikbaar blijven. Toekomstige releases dragen andere nummers (Nº 002, Nº 003).',
+            ],
+        ];
+    }
+}

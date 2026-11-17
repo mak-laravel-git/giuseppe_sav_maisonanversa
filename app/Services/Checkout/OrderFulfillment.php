@@ -1,0 +1,540 @@
+<?php
+
+namespace App\Services\Checkout;
+
+use App\Enums\NotificationType;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Jobs\Orders\SendOrderPaidAdminMail;
+use App\Jobs\Orders\SendOrderPaidBuyerMail;
+use App\Jobs\SyncOrderToBrevo;
+use App\Mail\SoldOutNotice;
+use App\Models\NewsletterSubscriber;
+use App\Models\Order;
+use App\Models\OrderStatusEvent;
+use App\Models\Payment;
+use App\Models\Product;
+use App\Models\User;
+use App\Services\Edition\EditionAllocator;
+use App\Services\Edition\EditionInventory;
+use App\Services\Edition\SimpleStock;
+use App\Services\FoundingCircle\FoundingCircleRegistrar;
+use App\Support\MailLocale;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Laravel\Cashier\Cashier;
+use Stripe\Exception\ApiErrorException;
+
+class OrderFulfillment
+{
+    public function __construct(
+        private EditionAllocator $allocator,
+        private EditionInventory $inventory,
+        private SimpleStock $simpleStock,
+        private FoundingCircleRegistrar $registrar,
+    ) {}
+
+    /**
+     * Mark payment + order paid from a Stripe Checkout Session (idempotent).
+     */
+    public function markPaidFromSession(object $session): ?Order
+    {
+        $payment = $this->findPaymentForSession($session);
+
+        if ($payment === null) {
+            return null;
+        }
+
+        if (($session->payment_status ?? null) !== 'paid') {
+            return $payment->order;
+        }
+
+        $order = $payment->order;
+        $alreadyPaid = $order->status->isFulfillment();
+
+        $fulfilled = DB::transaction(function () use ($payment, $order, $session): Order {
+            /** @var Payment $lockedPayment */
+            $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            /** @var Order $locked */
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $locked->loadMissing('product');
+
+            $intentId = $this->paymentIntentId($session);
+            $sessionId = is_string($session->id ?? null) ? $session->id : $lockedPayment->stripe_checkout_session_id;
+
+            if ($locked->status->isFulfillment()) {
+                $lockedPayment->fill([
+                    'status' => PaymentStatus::Paid,
+                    'stripe_checkout_session_id' => $sessionId,
+                    'stripe_payment_intent_id' => $intentId ?? $lockedPayment->stripe_payment_intent_id,
+                ])->save();
+
+                $locked->fill([
+                    'stripe_checkout_session_id' => $sessionId ?? $locked->stripe_checkout_session_id,
+                    'stripe_payment_intent_id' => $intentId ?? $locked->stripe_payment_intent_id,
+                ])->save();
+
+                return $locked->refresh();
+            }
+
+            if ($locked->status !== OrderStatus::Incomplete) {
+                return $locked->refresh();
+            }
+
+            $lockedPayment->fill([
+                'status' => PaymentStatus::Paid,
+                'stripe_checkout_session_id' => $sessionId,
+                'stripe_payment_intent_id' => $intentId ?? $lockedPayment->stripe_payment_intent_id,
+            ])->save();
+
+            if ($locked->product?->isLimitedEdition()) {
+                $this->allocator->allocate($locked);
+            }
+
+            $locked->fill([
+                'status' => OrderStatus::Paid,
+                'stripe_checkout_session_id' => $sessionId ?? $locked->stripe_checkout_session_id,
+                'stripe_payment_intent_id' => $intentId ?? $locked->stripe_payment_intent_id,
+            ])->save();
+
+            OrderStatusEvent::query()->firstOrCreate(
+                [
+                    'order_id' => $locked->id,
+                    'status' => OrderStatus::Paid,
+                ],
+                [
+                    'message' => 'Payment received. Your order has been created.',
+                    'user_id' => null,
+                ],
+            );
+
+            $locked->refresh();
+            $locked->loadMissing('product', 'user', 'editionPiece');
+
+            if ($locked->user !== null && $locked->product?->slug === Product::FOUNDING_SLUG) {
+                $this->registrar->inscribeFromOrder($locked);
+            }
+
+            return $locked;
+        });
+
+        if (! $alreadyPaid && $fulfilled->status->isFulfillment()) {
+            SendOrderPaidBuyerMail::dispatch($fulfilled);
+            SendOrderPaidAdminMail::dispatch($fulfilled);
+            SyncOrderToBrevo::dispatch($fulfilled);
+
+            if ($fulfilled->user_id !== null) {
+                notify_user(
+                    $fulfilled->user_id,
+                    NotificationType::Order,
+                    'Order paid',
+                    'Your order has been paid.',
+                    [
+                        'link_url' => route('member.orders.show', [
+                            'locale' => $fulfilled->locale ?? config('app.locale'),
+                            'order' => $fulfilled->id,
+                        ]),
+                        'link_label' => 'View order',
+                    ],
+                );
+            }
+
+            if ($this->inventory->snapshot($fulfilled->product)['soldOut']) {
+                $this->notifySoldOut();
+            }
+        }
+
+        return $fulfilled;
+    }
+
+    /**
+     * Create a Stripe refund (when a PaymentIntent exists).
+     *
+     * Null amount = full refund and mark the order refunded (inventory + register).
+     * With amount cents = partial Stripe refund only; caller handles register/order status.
+     *
+     * @return array{order: Order, stripe_refund_id: string|null}
+     *
+     * @throws ApiErrorException
+     */
+    public function refund(Order $order, ?int $amountCents = null, ?string $idempotencyKey = null): array
+    {
+        if ($order->status === OrderStatus::Refunded && $amountCents === null) {
+            return ['order' => $order, 'stripe_refund_id' => null];
+        }
+
+        $order->loadMissing('latestPayment');
+        $intentId = $order->latestPayment?->stripe_payment_intent_id
+            ?: $order->stripe_payment_intent_id;
+
+        $stripeRefundId = null;
+
+        if (filled($intentId)) {
+            $payload = ['payment_intent' => $intentId];
+
+            if ($amountCents !== null) {
+                $payload['amount'] = $amountCents;
+            }
+
+            $opts = $idempotencyKey !== null ? ['idempotency_key' => $idempotencyKey] : [];
+            $refund = Cashier::stripe()->refunds->create($payload, $opts);
+            $stripeRefundId = is_string($refund->id ?? null) ? $refund->id : null;
+        }
+
+        if ($amountCents === null) {
+            return [
+                'order' => $this->markRefunded($order),
+                'stripe_refund_id' => $stripeRefundId,
+            ];
+        }
+
+        return ['order' => $order->refresh(), 'stripe_refund_id' => $stripeRefundId];
+    }
+
+    /**
+     * Mark an order refunded from a Stripe charge.refunded webhook (idempotent, no Stripe call).
+     */
+    public function markRefundedFromPaymentIntent(?string $paymentIntentId): ?Order
+    {
+        if ($paymentIntentId === null || $paymentIntentId === '') {
+            return null;
+        }
+
+        $payment = Payment::query()
+            ->where('stripe_payment_intent_id', $paymentIntentId)
+            ->first();
+
+        if ($payment !== null) {
+            return $this->markRefunded($payment->order);
+        }
+
+        $order = Order::query()
+            ->where('stripe_payment_intent_id', $paymentIntentId)
+            ->first();
+
+        if ($order === null) {
+            return null;
+        }
+
+        return $this->markRefunded($order);
+    }
+
+    /**
+     * Restore inventory and set payment + order to refunded (idempotent).
+     */
+    public function markRefunded(Order $order): Order
+    {
+        return DB::transaction(function () use ($order): Order {
+            /** @var Order $locked */
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $locked->loadMissing('product', 'latestPayment');
+
+            if ($locked->status === OrderStatus::Refunded) {
+                return $locked;
+            }
+
+            $this->registrar->releaseForOrder($locked);
+            $this->releaseInventoryOnRefund($locked);
+
+            if ($locked->latestPayment !== null) {
+                $locked->latestPayment->fill([
+                    'status' => PaymentStatus::Refunded,
+                ])->save();
+            }
+
+            $locked->fill(['status' => OrderStatus::Refunded])->save();
+
+            OrderStatusEvent::query()->firstOrCreate(
+                [
+                    'order_id' => $locked->id,
+                    'status' => OrderStatus::Refunded,
+                ],
+                [
+                    'message' => 'Payment refunded.',
+                    'user_id' => null,
+                ],
+            );
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
+     * Mark payment + order failed from a Stripe Checkout Session (idempotent).
+     */
+    public function markFailedFromSession(object $session): ?Order
+    {
+        $payment = $this->findPaymentForSession($session);
+
+        if ($payment === null) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($payment, $session): Order {
+            /** @var Payment $lockedPayment */
+            $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            /** @var Order $locked */
+            $locked = Order::query()->whereKey($payment->order_id)->lockForUpdate()->firstOrFail();
+            $locked->loadMissing('product');
+
+            if ($locked->status->isFulfillment()) {
+                return $locked;
+            }
+
+            $this->releaseInventoryOnCancel($locked);
+
+            $intentId = $this->paymentIntentId($session);
+            $sessionId = is_string($session->id ?? null) ? $session->id : $lockedPayment->stripe_checkout_session_id;
+
+            $lockedPayment->fill([
+                'status' => PaymentStatus::Failed,
+                'stripe_checkout_session_id' => $sessionId,
+                'stripe_payment_intent_id' => $intentId ?? $lockedPayment->stripe_payment_intent_id,
+            ])->save();
+
+            $locked->fill([
+                'status' => OrderStatus::Failed,
+                'stripe_checkout_session_id' => $sessionId ?? $locked->stripe_checkout_session_id,
+                'stripe_payment_intent_id' => $intentId ?? $locked->stripe_payment_intent_id,
+            ])->save();
+
+            OrderStatusEvent::query()->firstOrCreate(
+                [
+                    'order_id' => $locked->id,
+                    'status' => OrderStatus::Failed,
+                ],
+                [
+                    'message' => 'Payment failed. The reservation has been released.',
+                    'user_id' => null,
+                ],
+            );
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
+     * Best-effort cancel for an incomplete checkout session.
+     */
+    public function markCanceledBySessionId(?string $sessionId): ?Order
+    {
+        if ($sessionId === null || $sessionId === '') {
+            return null;
+        }
+
+        $payment = Payment::query()
+            ->where('stripe_checkout_session_id', $sessionId)
+            ->first();
+
+        $order = $payment?->order
+            ?? Order::query()->where('stripe_checkout_session_id', $sessionId)->first();
+
+        if ($order === null || $order->status !== OrderStatus::Incomplete) {
+            return $order;
+        }
+
+        return DB::transaction(function () use ($order, $payment, $sessionId): Order {
+            /** @var Order $locked */
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $locked->loadMissing('product');
+
+            if ($locked->status !== OrderStatus::Incomplete) {
+                return $locked;
+            }
+
+            $this->releaseInventoryOnCancel($locked);
+
+            if ($payment !== null) {
+                /** @var Payment $lockedPayment */
+                $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+                if ($lockedPayment->status === PaymentStatus::Pending) {
+                    $lockedPayment->fill([
+                        'status' => PaymentStatus::Canceled,
+                        'stripe_checkout_session_id' => $sessionId,
+                    ])->save();
+                }
+            } else {
+                Payment::query()
+                    ->where('order_id', $locked->id)
+                    ->where('status', PaymentStatus::Pending)
+                    ->update(['status' => PaymentStatus::Canceled->value]);
+            }
+
+            $locked->fill(['status' => OrderStatus::Canceled])->save();
+
+            OrderStatusEvent::query()->firstOrCreate(
+                [
+                    'order_id' => $locked->id,
+                    'status' => OrderStatus::Canceled,
+                ],
+                [
+                    'message' => 'Checkout canceled. The reservation has been released.',
+                    'user_id' => null,
+                ],
+            );
+
+            return $locked->refresh();
+        });
+    }
+
+    public function markExpiredBySessionId(?string $sessionId): ?Order
+    {
+        return $this->markCanceledBySessionId($sessionId);
+    }
+
+    /**
+     * Admin or system cancel of an incomplete order: release inventory and cancel pending payment.
+     */
+    public function cancelIncomplete(Order $order, string $message, ?User $admin = null): Order
+    {
+        return DB::transaction(function () use ($order, $message, $admin): Order {
+            /** @var Order $locked */
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $locked->loadMissing('product');
+
+            if ($locked->status !== OrderStatus::Incomplete) {
+                return $locked->refresh();
+            }
+
+            $this->releaseInventoryOnCancel($locked);
+
+            Payment::query()
+                ->where('order_id', $locked->id)
+                ->where('status', PaymentStatus::Pending)
+                ->update(['status' => PaymentStatus::Canceled->value]);
+
+            $locked->fill(['status' => OrderStatus::Canceled])->save();
+
+            OrderStatusEvent::query()->create([
+                'order_id' => $locked->id,
+                'status' => OrderStatus::Canceled,
+                'message' => $message,
+                'user_id' => $admin?->id,
+            ]);
+
+            return $locked->refresh();
+        });
+    }
+
+    private function releaseInventoryOnCancel(Order $order): void
+    {
+        if ($order->product?->isLimitedEdition()) {
+            $this->registrar->releaseForOrder($order);
+            $this->allocator->releaseOnCancel($order);
+
+            return;
+        }
+
+        if ($order->product?->isSimple() && $order->status === OrderStatus::Incomplete) {
+            $this->simpleStock->release($order->product);
+        }
+    }
+
+    private function releaseInventoryOnRefund(Order $order): void
+    {
+        if ($order->product?->isLimitedEdition()) {
+            $this->allocator->releaseOnRefund($order);
+
+            return;
+        }
+
+        if ($order->product?->isSimple()) {
+            $this->simpleStock->releaseOnRefund($order->product);
+        }
+    }
+
+    private function notifySoldOut(): void
+    {
+        NewsletterSubscriber::query()
+            ->where('status', 'subscribed')
+            ->each(fn (NewsletterSubscriber $subscriber) => Mail::to($subscriber->email)
+                ->locale(MailLocale::resolve($subscriber->locale))
+                ->queue(new SoldOutNotice($subscriber)));
+    }
+
+    private function findPaymentForSession(object $session): ?Payment
+    {
+        $metadata = $session->metadata ?? [];
+        $paymentId = null;
+        $orderId = null;
+
+        if (is_array($metadata)) {
+            $paymentId = $metadata['payment_id'] ?? null;
+            $orderId = $metadata['order_id'] ?? null;
+        } elseif (is_object($metadata)) {
+            $paymentId = $metadata['payment_id'] ?? $metadata->payment_id ?? null;
+            $orderId = $metadata['order_id'] ?? $metadata->order_id ?? null;
+        }
+
+        if ($paymentId !== null && $paymentId !== '') {
+            $payment = Payment::query()->with('order')->find($paymentId);
+
+            if ($payment !== null) {
+                return $payment;
+            }
+        }
+
+        $sessionId = $session->id ?? null;
+
+        if (is_string($sessionId) && $sessionId !== '') {
+            $payment = Payment::query()
+                ->with('order')
+                ->where('stripe_checkout_session_id', $sessionId)
+                ->first();
+
+            if ($payment !== null) {
+                return $payment;
+            }
+        }
+
+        $order = null;
+
+        if ($orderId !== null && $orderId !== '') {
+            $order = Order::query()->find($orderId);
+        }
+
+        if ($order === null && is_string($sessionId) && $sessionId !== '') {
+            $order = Order::query()
+                ->where('stripe_checkout_session_id', $sessionId)
+                ->first();
+        }
+
+        if ($order === null) {
+            return null;
+        }
+
+        $payment = $order->latestPayment;
+
+        if ($payment !== null) {
+            return $payment->loadMissing('order');
+        }
+
+        return Payment::query()->create([
+            'order_id' => $order->id,
+            'status' => PaymentStatus::Pending,
+            'amount' => $order->amount,
+            'currency' => $order->currency,
+            'provider' => 'stripe',
+            'stripe_checkout_session_id' => is_string($sessionId) ? $sessionId : $order->stripe_checkout_session_id,
+            'stripe_payment_intent_id' => $order->stripe_payment_intent_id,
+        ])->load('order');
+    }
+
+    private function paymentIntentId(object $session): ?string
+    {
+        $paymentIntent = $session->payment_intent ?? null;
+
+        if (is_string($paymentIntent) && $paymentIntent !== '') {
+            return $paymentIntent;
+        }
+
+        if (is_object($paymentIntent) && isset($paymentIntent->id)) {
+            return (string) $paymentIntent->id;
+        }
+
+        return null;
+    }
+}

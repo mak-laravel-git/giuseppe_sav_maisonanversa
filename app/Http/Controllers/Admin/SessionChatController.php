@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Community\StoreSessionChatMessageRequest;
+use App\Models\CommunitySession;
+use App\Models\CommunitySessionMessage;
+use App\Models\User;
+use App\Services\Community\SessionChatService;
+use App\Support\SessionFeed;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * Staff session chat inbox. Open sessions get a composer; first send force-joins
+ * the admin for chat only when they are not already a confirmed player.
+ */
+class SessionChatController extends Controller
+{
+    public function __construct(private SessionChatService $chat) {}
+
+    public function index(Request $request, string $locale): Response
+    {
+        return $this->render($request->user(), $locale, null);
+    }
+
+    public function show(Request $request, string $locale, CommunitySession $communitySession): Response|RedirectResponse
+    {
+        if (! $this->chat->isWithinRetention($communitySession)) {
+            return redirect()->route('admin.chat.index', ['locale' => $locale]);
+        }
+
+        $communitySession->load(['host', 'club', 'participants.user', 'participantRecords', 'translations'])
+            ->loadCount(['playParticipants', 'joinRequests']);
+
+        return $this->render($request->user(), $locale, $communitySession);
+    }
+
+    public function store(
+        StoreSessionChatMessageRequest $request,
+        string $locale,
+        CommunitySession $communitySession,
+    ): RedirectResponse {
+        $this->chat->sendAsStaff(
+            $communitySession,
+            $request->user(),
+            $request->messageBody(),
+            $request->images(),
+        );
+
+        return back();
+    }
+
+    public function destroyMessage(
+        string $locale,
+        CommunitySession $communitySession,
+        CommunitySessionMessage $message,
+    ): RedirectResponse {
+        abort_unless($message->community_session_id === $communitySession->id, 404);
+
+        $this->chat->deleteMessage($message);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Bericht verwijderd.'),
+        ]);
+
+        return back();
+    }
+
+    private function render(User $viewer, string $locale, ?CommunitySession $active): Response
+    {
+        $sessions = $this->chatSessions();
+        $canSend = $active !== null && $this->chat->isOpen($active);
+        $purgeAt = $active !== null ? $this->chat->messagesPurgeAt($active) : null;
+
+        return Inertia::render('admin/chat', [
+            'sessions' => SessionFeed::present($sessions, $viewer, $locale),
+            'activeSession' => $active === null
+                ? null
+                : SessionFeed::toCard($active, $viewer, $locale),
+            'viewer' => SessionFeed::player($viewer, $active?->host_id),
+            'messages' => $active === null ? [] : $this->chat->listFor($active),
+            'can_send' => $canSend,
+            'messages_purge_at' => $purgeAt?->toIso8601String(),
+            'can_moderate' => true,
+        ]);
+    }
+
+    /**
+     * Every session with a chat roster: host plus confirmed players, including
+     * past and cancelled while still inside the retention window.
+     *
+     * @return Collection<int, CommunitySession>
+     */
+    private function chatSessions(): Collection
+    {
+        return $this->chat->scopeWithinRetention(SessionFeed::base())
+            ->orderByDesc('starts_at')
+            ->get();
+    }
+}

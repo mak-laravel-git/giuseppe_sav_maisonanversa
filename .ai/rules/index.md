@@ -1,0 +1,52 @@
+# Project Rules Index
+
+Before planning or editing, find the row whose globs match the file's path and read that rule file.
+
+| Applies to | Rule file |
+| --- | --- |
+| app/Http/Controllers/Admin/CommunityEventController.php, app/Http/Controllers/Admin/OpsController.php | .ai/rules/admin.md |
+| app/Services/Brevo/**, app/Contracts/BrevoContacts.php, app/Jobs/SyncOrderToBrevo.php | .ai/rules/brevo.md |
+| app/Services/FoundingCircle/**,app/Support/PassportPresenter.php,app/Services/Checkout/OrderFulfillment.php | .ai/rules/checkout.md |
+| app/Console/Commands/Community/** | .ai/rules/commands-community.md |
+| app/Services/Locale/**,app/Services/Community/SessionNotificationService.php,app/Support/MailLocale.php,config/maison.php | .ai/rules/community-support.md |
+| app/Http/Controllers/Community/ClubController.php, app/Http/Controllers/Community/SessionController.php | .ai/rules/community.md |
+| resources/js/components/admin/** | .ai/rules/components-admin.md |
+| resources/js/hooks/use-locale.ts,resources/js/hooks/use-flash-toast.ts,resources/js/components/i18n-provider.tsx | .ai/rules/components.md |
+| app/Support/SessionFeed.php,resources/js/lib/session-format.ts,config/app.php,app/Http/Controllers/Community/SessionController.php | .ai/rules/controllers-community.md |
+| app/Http/Controllers/Maison/VerificationController.php, app/Http/Controllers/Maison/SessionShareController.php, app/Http/Controllers/Maison/GuestReturnLinkRequestController.php | .ai/rules/controllers-maison.md |
+| resources/js/pages/maison/home.tsx,resources/js/components/maison/home/**,app/Support/SessionFeed.php,app/Http/Controllers/MaisonController.php | .ai/rules/controllers.md |
+| docker/** | .ai/rules/docker.md |
+| Dockerfile | .ai/rules/dockerfile.md |
+| app/Services/Edition/** | .ai/rules/edition.md |
+| app/Services/FoundingCircle/** | .ai/rules/founding-circle.md |
+| resources/js/components/maison/home/** | .ai/rules/home.md |
+| resources/js/pages/maison/house.tsx,resources/js/components/maison/house/** | .ai/rules/house.md |
+| app/Support/Html/** | .ai/rules/html.md |
+| resources/js/hooks/use-flash-toast.ts,resources/js/components/notifications/**,app/Http/Controllers/**/*Controller.php | .ai/rules/http-controllers.md |
+| app/Jobs/TranslateModelJob.php | .ai/rules/jobs.md |
+| app/Services/Auth/**,bootstrap/app.php,app/Http/Controllers/Auth/**,resources/js/layouts/frontend-layout.tsx | .ai/rules/js-layouts.md |
+| resources/js/components/member/**,resources/js/layouts/member-layout.tsx | .ai/rules/layouts.md |
+| resources/js/pages/admin/legal-pages/**/*.tsx | .ai/rules/legal-pages.md |
+| resources/js/pages/admin/letter/**/*.tsx | .ai/rules/letter.md |
+| app/Mail/**, app/Services/Auth/PasswordResetOtpService.php | .ai/rules/mail.md |
+| resources/js/components/maison/community/** | .ai/rules/maison-community.md |
+| resources/js/pages/maison/founding-circle/** | .ai/rules/maison-founding-circle.md |
+| resources/js/components/maison/modals/**, resources/js/components/ui/select.tsx, resources/js/components/gender-select.tsx | .ai/rules/maison-modals.md |
+| resources/js/pages/maison/house.tsx, resources/js/pages/maison/community.tsx | .ai/rules/maison.md |
+| resources/match-card/** | .ai/rules/match-card.md |
+| resources/js/pages/member/returns/** | .ai/rules/member-returns.md |
+| resources/js/components/member/**, resources/js/layouts/member-layout.tsx | .ai/rules/member.md |
+| app/Models/*.php, app/Models/Inquiry.php, app/Models/HomeHero.php, app/Models/StoryPage.php, app/Models/SiteSetting.php | .ai/rules/models.md |
+| app/Monitoring/** | .ai/rules/monitoring.md |
+| app/Services/Newsletter/**, app/Http/Controllers/Member/DashboardController.php, resources/js/pages/member/letter.tsx, resources/js/pages/member/email-preferences.tsx | .ai/rules/newsletter.md |
+| resources/js/pages/admin/**/*.tsx | .ai/rules/pages-admin.md |
+| app/Services/Returns/** | .ai/rules/returns.md |
+| routes/web.php | .ai/rules/routes.md |
+| app/Support/Seo/** | .ai/rules/seo.md |
+| app/Services/Checkout/** | .ai/rules/services-checkout.md |
+| app/Services/Community/ClubMerger.php, app/Services/Community/SessionNotificationService.php, app/Services/Community/SessionChatService.php | .ai/rules/services-community.md |
+| app/Http/Controllers/Maison/GuestOrderReturnController.php,app/Services/Returns/GuestReturnLink.php | .ai/rules/services-returns.md |
+| resources/js/components/maison/community/sessions/** | .ai/rules/sessions.md |
+| resources/js/pages/admin/site-settings/**, resources/js/components/maison/shell/**, resources/js/lib/maison-navigation.ts, app/Support/Seo/**, app/Models/SiteSetting.php, resources/js/lib/session-format.ts | .ai/rules/site-settings.md |
+| app/Support/PassportPresenter.php, app/Support/ClubDirectory.php, app/Http/Controllers/Maison/VerificationController.php, app/Support/HomeHeroPresenter.php, app/Support/SessionFeed.php, app/Support/MatchScore.php, app/Support/MatchCardPresenter.php | .ai/rules/support.md |
+| app/Services/Translation/** | .ai/rules/translation.md |
