@@ -149,6 +149,31 @@ test('E3: the approval that fills the session tells every other player and the a
         ->and(mailedNotice($this->otherAdmin, SessionNotice::AdminFull))->toBeTrue();
 });
 
+test('E3: an instant join that fills the session also tells the joining player', function () {
+    $this->session->update(['capacity' => 3, 'requests_required' => false]);
+    $joiner = User::factory()->create();
+
+    joinSession($joiner, $this->session);
+
+    expect(inAppNotices($joiner))->toBe([SessionNotice::SessionFull->value])
+        ->and(mailedNotice($joiner, SessionNotice::SessionFull))->toBeTrue()
+        ->and(mailsTo($joiner))->toBe(1)
+        ->and(inAppNotices($this->player))->toBe([SessionNotice::SessionFull->value])
+        ->and(inAppNotices($this->host))->toBe([SessionNotice::NewPlayer->value, SessionNotice::SessionFull->value])
+        ->and(inAppNotices($this->admin))->toBe([SessionNotice::AdminFull->value]);
+});
+
+test('an instant join that leaves places free sends the joining player nothing', function () {
+    $this->session->update(['requests_required' => false]);
+    $joiner = User::factory()->create();
+
+    joinSession($joiner, $this->session);
+
+    expect(inAppNotices($joiner))->toBe([])
+        ->and(mailsTo($joiner))->toBe(0)
+        ->and(inAppNotices($this->host))->toBe([SessionNotice::NewPlayer->value]);
+});
+
 test('rejecting a request tells only the requester', function () {
     $joiner = User::factory()->create();
     joinSession($joiner, $this->session);

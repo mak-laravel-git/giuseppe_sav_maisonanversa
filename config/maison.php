@@ -211,8 +211,9 @@ return [
     |
     | Story and Post PNGs rendered by resources/match-card/render.mjs (Satori +
     | resvg). Players are notified once a session with at least `min_players`
-    | confirmed players has ended; sessions that ended longer than
-    | `notify_window_hours` ago are skipped so a deploy never mails old games.
+    | confirmed players has ended and has an approved official result; results
+    | approved longer than `notify_window_hours` ago are skipped so a deploy
+    | never mails old games.
     | Bump `template_version` after changing the template to drop cached PNGs.
     |
     */

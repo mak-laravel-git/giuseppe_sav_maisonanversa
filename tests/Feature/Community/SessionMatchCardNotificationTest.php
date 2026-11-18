@@ -2,10 +2,12 @@
 
 use App\Enums\SessionNotice;
 use App\Enums\SessionParticipantStatus;
+use App\Enums\SessionScoreStatus;
 use App\Mail\SessionNoticeMail;
 use App\Models\Club;
 use App\Models\CommunitySession;
 use App\Models\CommunitySessionParticipant;
+use App\Models\CommunitySessionScore;
 use App\Models\User;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Mail;
@@ -33,6 +35,13 @@ beforeEach(function () {
             'user_id' => $user->id,
         ]);
     }
+
+    $this->score = CommunitySessionScore::factory()->approved()->create([
+        'community_session_id' => $this->session->id,
+        'submitted_by' => $this->host->id,
+        'team_a' => [$this->host->id],
+        'team_b' => [$this->player->id],
+    ]);
 });
 
 function matchCardMailTo(User $user): ?SessionNoticeMail
@@ -130,5 +139,16 @@ test('no match card is sent for sessions that do not qualify', function (Closure
     'cancelled' => [fn (CommunitySession $session) => $session->update(['cancelled_at' => now()])],
     'already sent' => [fn (CommunitySession $session) => $session->update(['match_card_sent_at' => now()->subHour()])],
     'not yet ended' => [fn (CommunitySession $session) => $session->update(['starts_at' => now()->subMinutes(30)])],
-    'ended long ago' => [fn (CommunitySession $session) => $session->update(['starts_at' => now()->subDays(5)])],
+    'no official score yet' => [fn (CommunitySession $session) => $session->scores()->delete()],
+    'only a pending score' => [fn (CommunitySession $session) => $session->scores()->update(['status' => SessionScoreStatus::Pending->value])],
+    'result approved long ago' => [fn (CommunitySession $session) => $session->scores()->update(['reviewed_at' => now()->subDays(5)])],
 ]);
+
+test('a result approved on day three still earns the match card', function () {
+    $this->session->update(['starts_at' => now()->subDays(3)->subHours(2)]);
+
+    $this->artisan('sessions:send-match-cards')->assertSuccessful();
+
+    expect(matchCardMailTo($this->host))->not->toBeNull()
+        ->and(matchCardMailTo($this->player))->not->toBeNull();
+});

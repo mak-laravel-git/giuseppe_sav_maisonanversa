@@ -42,7 +42,8 @@ class SessionNotificationService
 
     /**
      * Instant join on an open session: the organiser hears NewPlayer; a join
-     * that fills the session also fires SessionFull (E3) for everyone.
+     * that fills the session also fires SessionFull (E3) for everyone, the
+     * joining player included: an instant join gets no other confirmation.
      */
     public function joined(CommunitySession $session, User $player): void
     {
@@ -51,7 +52,7 @@ class SessionNotificationService
         $this->deliver(SessionNotice::NewPlayer, $this->hostOnly($session), $session, $player, $player);
 
         if ($this->freshPlayerCount($session) >= $session->capacity) {
-            $this->deliver(SessionNotice::SessionFull, $this->everyone($session), $session, $player, $player);
+            $this->deliver(SessionNotice::SessionFull, $this->everyone($session), $session, $player);
             $this->deliver(SessionNotice::AdminFull, $this->admins(), $session, $player, $player);
         }
     }
