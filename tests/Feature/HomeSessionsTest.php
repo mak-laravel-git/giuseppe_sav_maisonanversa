@@ -158,6 +158,8 @@ test('the home sessions section matches the PDF placement copy and card', functi
 
     expect($homeSessions)
         ->toContain('HomeSessionCard')
+        ->toContain('at a club near you')
+        ->not->toContain('partner clubs')
         ->toContain('After the coffee, the court.')
         ->toContain('Community · Sessions')
         ->toContain('+ Plan a session')

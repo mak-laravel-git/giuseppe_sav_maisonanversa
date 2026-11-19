@@ -5,13 +5,22 @@ import { Reveal } from '@/components/maison/ui/reveal';
 import type { ImageAssetName } from '@/lib/imagery';
 import type { MaisonPage } from '@/lib/maison-navigation';
 
-const CARDS = [
+type ContentCard = {
+    to: MaisonPage;
+    asset: ImageAssetName;
+    eye: string;
+    title: string;
+    desc: string | null;
+    link: string;
+};
+
+const CARDS: readonly ContentCard[] = [
     {
-        to: 'story' as MaisonPage,
-        asset: 'atelier-workshop' as ImageAssetName,
+        to: 'story',
+        asset: 'atelier-workshop',
         eye: 'The Manifesto',
         title: 'Our convictions. Our promise. Our direction.',
-        desc: 'We are not building a sports brand. We are building a home for people who share the same values.',
+        desc: null,
         link: 'Read the Manifesto →',
     },
     {
@@ -38,7 +47,7 @@ const CARDS = [
         desc: 'A house built from conviction, step by step.',
         link: 'Read our story →',
     },
-] as const;
+];
 
 /**
  * Four editorial doorways under the pre-order band. Real links rather than
@@ -75,9 +84,13 @@ export function HomeContentGrid() {
                         <h2 className="mb-2.5 font-serif text-xl leading-[1.3] font-medium text-cream">
                             {t(card.title)}
                         </h2>
-                        <p className="flex-1 text-[13px] leading-[1.7] text-stone">
-                            {t(card.desc)}
-                        </p>
+                        {card.desc !== null ? (
+                            <p className="flex-1 text-[13px] leading-[1.7] text-stone">
+                                {t(card.desc)}
+                            </p>
+                        ) : (
+                            <div className="flex-1" />
+                        )}
                         <div className="mt-5 inline-flex items-center gap-2 border-b border-gold/25 pb-0.5 font-sans text-[8px] tracking-[0.25em] text-gold uppercase transition-colors group-hover:border-gold">
                             {t(card.link)}
                         </div>

@@ -37,7 +37,7 @@ const BENEFITS = [
     {
         num: '06',
         title: 'Priority Support',
-        desc: 'All questions and requests from Founding Members are always handled first. Response time within 12 hours.',
+        desc: 'Personal reply from the founder.',
     },
 ] as const;
 

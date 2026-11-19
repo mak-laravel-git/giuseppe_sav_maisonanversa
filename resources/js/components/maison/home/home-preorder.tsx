@@ -97,7 +97,7 @@ export function HomePreorder({
             <Wrap>
                 <div className="grid items-center gap-10 ma-lg:grid-cols-2 ma-lg:gap-20">
                     <Reveal>
-                        <Eyebrow>{t('Pre-Order Now Open')}</Eyebrow>
+                        <Eyebrow>{t('Pre-order opening soon')}</Eyebrow>
                         <h2 className="mt-3 mb-4 font-serif text-[clamp(28px,3.5vw,44px)] leading-[1.1] font-medium">
                             {t('Reserve')}
                             <br />

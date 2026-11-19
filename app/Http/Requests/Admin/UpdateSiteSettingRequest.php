@@ -23,8 +23,6 @@ class UpdateSiteSettingRequest extends FormRequest
             'email_hello' => ['required', 'email', 'max:255'],
             'email_press' => ['required', 'email', 'max:255'],
             'instagram_url' => ['required', 'url', 'max:255'],
-            'boutique_lat' => ['required', 'numeric', 'between:-90,90'],
-            'boutique_lng' => ['required', 'numeric', 'between:-180,180'],
             'return_address' => ['nullable', 'string', 'max:2000'],
         ];
     }

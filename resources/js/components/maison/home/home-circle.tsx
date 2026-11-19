@@ -35,7 +35,7 @@ const BENEFITS = [
     {
         icon: '★',
         title: 'Priority Support',
-        desc: 'All questions handled first. Response within 12 hours.',
+        desc: 'Personal reply from the founder.',
     },
 ] as const;
 

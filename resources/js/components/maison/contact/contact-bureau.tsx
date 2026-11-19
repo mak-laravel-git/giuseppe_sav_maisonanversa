@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils';
 const PANEL_TITLES: Record<BureauPanelId, string> = {
     bestel: 'Track your order',
     care: 'Maison Care',
-    concierge: 'Private consultation',
     faq: 'Frequently asked questions',
     feedback: 'Your feedback',
 };
@@ -155,7 +154,7 @@ function BureauPanelBody({
                 <>
                     <p className="text-sm leading-[1.8] text-sand">
                         {t(
-                            'Once Heritage Nº 001 delivers, you can track the status of your edition number here. Until then, we will look up your reservation manually — send us your name or reservation number via WhatsApp or email.',
+                            'Once Heritage Nº 001 delivers, you can track the status of your edition number here. Until then, we will look up your reservation manually — send us your name or reservation number by email or the contact form.',
                         )}
                     </p>
                     <BureauNote>
@@ -171,48 +170,6 @@ function BureauPanelBody({
                             'Each Heritage racket is hand-finished and deserves ongoing care. We advise on leather maintenance, repairs and warranty. When in doubt, send the racket back to us for inspection.',
                         )}
                     </p>
-                </>
-            );
-        case 'concierge':
-            return (
-                <>
-                    <p className="text-sm leading-[1.8] text-sand">
-                        {t(
-                            'Speaking with a Maison specialist: a personal video call about your number, the finish, the leather and the monogram. No pressure, no rush — just tailored advice.',
-                        )}
-                    </p>
-                    <BureauForm kind="consult" submitLabel="Request consultation">
-                        <BureauFieldRow>
-                            <BureauInput
-                                name="name"
-                                placeholder="Name"
-                                required
-                                defaultValue={visitor.name}
-                            />
-                            <BureauInput
-                                name="email"
-                                type="email"
-                                placeholder="Email address"
-                                required
-                                defaultValue={visitor.email}
-                            />
-                        </BureauFieldRow>
-                        <BureauSelect
-                            name="moment"
-                            options={[
-                                'Preferred time',
-                                'Morning',
-                                'Afternoon',
-                                'End of day',
-                            ]}
-                            className="col-span-full"
-                        />
-                        <BureauTextarea
-                            name="message"
-                            placeholder="What would you like to discuss? (optional)"
-                        />
-                    </BureauForm>
-                    <BureauNote>We confirm personally within 24 hours</BureauNote>
                 </>
             );
         case 'faq':

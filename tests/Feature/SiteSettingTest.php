@@ -26,12 +26,12 @@ test('site settings are shared globally', function () {
         'email_hello' => 'hello@test.com',
         'email_press' => 'press@test.com',
         'instagram_url' => 'https://www.instagram.com/maison',
-        'boutique_lat' => '51.2200000',
-        'boutique_lng' => '4.4040000',
     ]);
 
     $this->get('/nl/contact')
         ->assertOk()
+        ->assertDontSee('openstreetmap.org', false)
+        ->assertDontSee('51.220', false)
         ->assertInertia(fn ($page) => $page
             ->where('site.emailHello', 'hello@test.com')
             ->where('site.emailPress', 'press@test.com')
@@ -39,6 +39,9 @@ test('site settings are shared globally', function () {
             ->where('site.instagramUrl', 'https://www.instagram.com/maison')
             ->where('site.phone', '+32123456789')
             ->where('site.whatsappHref', 'https://wa.me/32123456789')
+            ->missing('site.boutiqueLat')
+            ->missing('site.boutiqueLng')
+            ->missing('site.boutiqueMapSrc')
             ->missing('site.announcementText'));
 });
 
@@ -52,8 +55,6 @@ test('admin can update site settings', function () {
             'email_hello' => 'contact@maison.test',
             'email_press' => 'press@maison.test',
             'instagram_url' => 'https://www.instagram.com/maisonanversa',
-            'boutique_lat' => '51.221',
-            'boutique_lng' => '4.405',
             'return_address' => "Maison Anversa\nReturns desk\nAntwerp",
         ])
         ->assertRedirect();
@@ -90,6 +91,8 @@ test('staff can open the site settings form', function () {
             ->has('settings.phone')
             ->has('settings.instagram_url')
             ->has('settings.return_address')
+            ->missing('settings.boutique_lat')
+            ->missing('settings.boutique_lng')
             ->missing('settings.announcement_text')
             ->missing('translations')
             ->missing('translationStatus'));

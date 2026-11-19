@@ -23,8 +23,6 @@ class SiteSettingController extends Controller
                 'email_hello' => $settings->email_hello,
                 'email_press' => $settings->email_press,
                 'instagram_url' => $settings->instagram_url,
-                'boutique_lat' => (string) $settings->boutique_lat,
-                'boutique_lng' => (string) $settings->boutique_lng,
                 'return_address' => (string) ($settings->return_address ?? ''),
             ],
         ]);

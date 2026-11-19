@@ -10,10 +10,10 @@ import * as sessionRoutes from '@/routes/community/sessions';
 import type { SessionCard as SessionCardData } from '@/types/session';
 
 const INTRO_DESKTOP =
-    'Find an open session at one of our partner clubs, or plan your own and invite your friends. You book the court with the club; we bring the players together.';
+    'Find an open session at a club near you, or plan your own and invite your friends. You book the court with the club; we bring the players together.';
 
 const INTRO_MOBILE =
-    'Find an open session at one of our partner clubs, or plan your own and invite your friends.';
+    'Find an open session at a club near you, or plan your own and invite your friends.';
 
 const EMPTY_BODY =
     'Choose a club and a time, share the link with your friends, and other members can join.';

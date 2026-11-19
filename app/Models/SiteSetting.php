@@ -15,21 +15,8 @@ class SiteSetting extends Model
         'email_hello',
         'email_press',
         'instagram_url',
-        'boutique_lat',
-        'boutique_lng',
         'return_address',
     ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'boutique_lat' => 'decimal:7',
-            'boutique_lng' => 'decimal:7',
-        ];
-    }
 
     public static function current(): self
     {
@@ -45,8 +32,6 @@ class SiteSetting extends Model
             'email_hello' => 'hello@maisonanversa.com',
             'email_press' => 'press@maisonanversa.com',
             'instagram_url' => 'https://www.instagram.com/',
-            'boutique_lat' => '51.2200000',
-            'boutique_lng' => '4.4040000',
         ]);
     }
 
@@ -57,9 +42,6 @@ class SiteSetting extends Model
      *     emailHello: string,
      *     emailPress: string,
      *     instagramUrl: string,
-     *     boutiqueLat: float,
-     *     boutiqueLng: float,
-     *     boutiqueMapSrc: string,
      *     whatsappHref: string,
      *     phoneHref: string|null,
      *     emailHelloHref: string,
@@ -68,22 +50,12 @@ class SiteSetting extends Model
      */
     public function toShare(): array
     {
-        $lat = (float) $this->boutique_lat;
-        $lng = (float) $this->boutique_lng;
-        $bboxLngMin = number_format($lng - 0.016, 3, '.', '');
-        $bboxLngMax = number_format($lng + 0.016, 3, '.', '');
-        $bboxLatMin = number_format($lat - 0.014, 3, '.', '');
-        $bboxLatMax = number_format($lat + 0.014, 3, '.', '');
-
         return [
             'phone' => $this->phone,
             'whatsapp' => $this->whatsapp,
             'emailHello' => $this->email_hello,
             'emailPress' => $this->email_press,
             'instagramUrl' => $this->instagram_url,
-            'boutiqueLat' => $lat,
-            'boutiqueLng' => $lng,
-            'boutiqueMapSrc' => "https://www.openstreetmap.org/export/embed.html?bbox={$bboxLngMin}%2C{$bboxLatMin}%2C{$bboxLngMax}%2C{$bboxLatMax}&layer=mapnik&marker={$lat}%2C{$lng}",
             'whatsappHref' => 'https://wa.me/'.$this->whatsapp,
             'phoneHref' => filled($this->phone) ? 'tel:'.$this->phone : null,
             'emailHelloHref' => 'mailto:'.$this->email_hello,

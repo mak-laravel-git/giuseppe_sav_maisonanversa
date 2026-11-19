@@ -36,19 +36,23 @@ test('the contact bureau opens one panel under the chosen bubble rather than sta
         ->not->toContain('openPanels');
 });
 
-test('the contact bureau exposes five collapsible panels and no atelier, appointment, phone or map entry points', function () {
+test('the contact bureau exposes email and the contact form, without whatsapp, consultation, atelier or a map', function () {
     $source = file_get_contents(resource_path('js/components/maison/contact/contact-bureau.tsx'));
     $dataSource = file_get_contents(resource_path('js/components/maison/contact/contact-data.ts'));
 
     expect($dataSource)->toContain("'bestel'")
         ->and($dataSource)->toContain("'care'")
-        ->and($dataSource)->toContain("'concierge'")
         ->and($dataSource)->toContain("'faq'")
         ->and($dataSource)->toContain("'feedback'")
+        ->and($dataSource)->toContain('Email us')
+        ->and($dataSource)->not->toContain("'concierge'")
+        ->and($dataSource)->not->toContain('WhatsApp us')
+        ->and($dataSource)->not->toContain('Private consultation')
         ->and($dataSource)->not->toContain("'afspraak'")
         ->and($dataSource)->not->toContain("'atelier'")
         ->and($source)->not->toContain('<iframe')
-        ->and($source)->not->toContain('mapSrc');
+        ->and($source)->not->toContain('mapSrc')
+        ->and($source)->not->toContain('WhatsApp');
 });
 
 test('the contact faq uses native details elements', function () {
@@ -67,7 +71,7 @@ test('the bureau forms post contact inquiries through inertia', function () {
     expect($formSource)->toContain('storeContact')
         ->and($formSource)->toContain("from '@/routes/maison/contact'")
         ->and($formSource)->not->toContain('submitBureauMailto')
-        ->and($bureauSource)->toContain('kind="consult"')
+        ->and($bureauSource)->not->toContain('kind="consult"')
         ->and($bureauSource)->toContain('kind="feedback"');
 });
 

@@ -15,8 +15,6 @@ class SiteSettingSeeder extends Seeder
             'email_hello' => 'hello@maisonanversa.com',
             'email_press' => 'press@maisonanversa.com',
             'instagram_url' => 'https://www.instagram.com/',
-            'boutique_lat' => '51.2200000',
-            'boutique_lng' => '4.4040000',
         ]);
     }
 }

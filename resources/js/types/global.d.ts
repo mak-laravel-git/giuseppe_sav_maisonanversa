@@ -30,9 +30,6 @@ export type SiteShared = {
     emailHello: string;
     emailPress: string;
     instagramUrl: string;
-    boutiqueLat: number;
-    boutiqueLng: number;
-    boutiqueMapSrc: string;
     whatsappHref: string;
     phoneHref: string | null;
     emailHelloHref: string;

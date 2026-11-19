@@ -22,8 +22,6 @@ interface SiteSettingsForm {
     email_hello: string;
     email_press: string;
     instagram_url: string;
-    boutique_lat: string;
-    boutique_lng: string;
     return_address: string;
 }
 
@@ -39,8 +37,6 @@ export default function SiteSettingsEdit({
         email_hello: settings.email_hello,
         email_press: settings.email_press,
         instagram_url: settings.instagram_url,
-        boutique_lat: settings.boutique_lat,
-        boutique_lng: settings.boutique_lng,
         return_address: settings.return_address ?? '',
     });
 
@@ -56,7 +52,7 @@ export default function SiteSettingsEdit({
                 <AdminPageHeader
                     title={t('Site settings')}
                     description={t(
-                        'Email, Instagram, and optional phone for the house. Map coordinates are unused on the storefront.',
+                        'Email, Instagram, and optional phone for the house.',
                     )}
                     icon={Globe}
                 />
@@ -82,7 +78,7 @@ export default function SiteSettingsEdit({
                         <AdminPanel
                             title={t('Contact details')}
                             description={t(
-                                'Phone, WhatsApp, and email addresses visitors see.',
+                                'Phone and email addresses. The contact page shows email and the contact form only.',
                             )}
                         >
                             <div className="grid gap-5">
@@ -182,52 +178,6 @@ export default function SiteSettingsEdit({
                                     />
                                     <InputError
                                         message={form.errors.instagram_url}
-                                    />
-                                </div>
-                            </div>
-                        </AdminPanel>
-
-                        <AdminPanel
-                            title={t('Atelier')}
-                            description={t(
-                                'Map pin on the contact page.',
-                            )}
-                        >
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="boutique_lat">
-                                        {t('Latitude')}
-                                    </Label>
-                                    <Input
-                                        id="boutique_lat"
-                                        value={form.data.boutique_lat}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'boutique_lat',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={form.errors.boutique_lat}
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="boutique_lng">
-                                        {t('Longitude')}
-                                    </Label>
-                                    <Input
-                                        id="boutique_lng"
-                                        value={form.data.boutique_lng}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'boutique_lng',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={form.errors.boutique_lng}
                                     />
                                 </div>
                             </div>
