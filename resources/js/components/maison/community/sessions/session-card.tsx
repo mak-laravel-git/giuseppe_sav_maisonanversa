@@ -66,11 +66,14 @@ export function SessionCard({ session }: SessionCardProps) {
 
                 {session.club?.is_partner && <PartnerBadge className="mt-2" />}
 
-                <p className="mt-2 font-sans text-[11px] tracking-[0.08em] text-stone">
-                    {t('Organised by {{name}}', {
-                        name: session.host.name || session.host.initials,
-                    })}
-                </p>
+                {session.host && (
+                    <p className="mt-2 font-sans text-[11px] tracking-[0.08em] text-stone">
+                        {t('Organised by {{name}}', {
+                            name:
+                                session.host.name || session.host.initials,
+                        })}
+                    </p>
+                )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-sans text-[11px] tracking-[0.08em] text-stone">
                     <span className="inline-flex items-center gap-1.5">

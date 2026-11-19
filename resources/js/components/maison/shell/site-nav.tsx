@@ -23,6 +23,9 @@ import { cn } from '@/lib/utils';
 export function SiteNav() {
     const { url } = usePage();
     const { foundingRegister, auth } = usePage().props;
+    const inscribedCount = foundingRegister?.inscribed_count ?? 0;
+    const placesTotal = foundingRegister?.places_total ?? 100;
+    const latestEntry = foundingRegister?.latest_entry;
     const isAuthenticated = auth?.user != null;
     const { locale } = useLocale();
     const { t } = useTranslation();
@@ -145,21 +148,14 @@ export function SiteNav() {
                                     >
                                         <span>{t('The register')}</span>
                                         <span className="text-gold">
-                                            {foundingRegister.inscribed_count}/
-                                            {foundingRegister.places_total}
+                                            {inscribedCount}/{placesTotal}
                                         </span>
                                     </a>
-                                    {foundingRegister.latest_entry && (
+                                    {latestEntry && (
                                         <p className="font-sans text-[10px] tracking-[0.08em] text-sand">
                                             {t('Latest inscription')}{' '}
-                                            {
-                                                foundingRegister.latest_entry
-                                                    .number
-                                            }{' '}
-                                            {
-                                                foundingRegister.latest_entry
-                                                    .label
-                                            }
+                                            {latestEntry.number}{' '}
+                                            {latestEntry.label}
                                         </p>
                                     )}
                                 </div>

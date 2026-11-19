@@ -53,7 +53,9 @@ export default function SessionShow({
     const pendingCount = session.pending_count ?? 0;
     const isRejected = session.viewer_status === 'rejected';
     const wantsCancel =
-        new URLSearchParams(page.url.split('?')[1] ?? '').get('cancel') === '1';
+        new URLSearchParams((page.url ?? '').split('?')[1] ?? '').get(
+            'cancel',
+        ) === '1';
     const seatsAllRequested =
         !session.can_join &&
         !session.is_joined &&

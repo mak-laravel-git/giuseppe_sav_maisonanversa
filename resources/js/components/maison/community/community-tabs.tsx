@@ -92,8 +92,8 @@ export function CommunityTabs() {
     );
 }
 
-export function activeSection(url: string): CommunitySection {
-    const [path] = url.split('?');
+export function activeSection(url: string | undefined): CommunitySection {
+    const [path] = (url ?? '').split('?');
 
     if (path.includes('/community/clubs')) {
         return 'clubs';

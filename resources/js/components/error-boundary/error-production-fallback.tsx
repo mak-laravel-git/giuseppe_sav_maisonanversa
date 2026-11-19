@@ -10,7 +10,11 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 
-export function ErrorProductionFallback() {
+export function ErrorProductionFallback({
+    detail,
+}: {
+    detail?: string;
+} = {}) {
     const handleReload = () => window.location.reload();
     const handleBack = () => window.history.back();
     const handleHome = () => (window.location.href = '/');
@@ -60,6 +64,11 @@ export function ErrorProductionFallback() {
                                 cache or contact support.
                             </AlertDescription>
                         </Alert>
+                        {detail ? (
+                            <p className="mt-3 break-words font-mono text-[11px] leading-relaxed text-muted-foreground">
+                                {detail}
+                            </p>
+                        ) : null}
                     </CardContent>
 
                     <CardFooter className="flex flex-col gap-2 pt-2">

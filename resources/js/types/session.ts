@@ -40,7 +40,7 @@ export type SessionCard = {
     open_slots: number;
     players: SessionPlayer[];
     notes: string | null;
-    host: SessionPlayer;
+    host: SessionPlayer | null;
     is_full: boolean;
     is_past: boolean;
     is_cancelled: boolean;

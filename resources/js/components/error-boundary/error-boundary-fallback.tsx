@@ -14,5 +14,10 @@ export function ErrorBoundaryFallback(props: FallbackProps) {
         return <ErrorDevFallback {...props} />;
     }
 
-    return <ErrorProductionFallback />;
+    const message =
+        props.error instanceof Error
+            ? props.error.message
+            : String(props.error ?? '');
+
+    return <ErrorProductionFallback detail={message || undefined} />;
 }

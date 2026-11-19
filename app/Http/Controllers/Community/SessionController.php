@@ -144,6 +144,7 @@ class SessionController extends Controller
             'joinRequests' => $showsRequests
                 ? $communitySession->joinRequests
                     ->sortBy('created_at')
+                    ->filter(fn (CommunitySessionParticipant $row): bool => $row->user !== null)
                     ->map(fn (CommunitySessionParticipant $row): array => [
                         ...SessionFeed::player($row->user),
                         'requested_at' => $row->created_at?->toIso8601String(),

@@ -72,7 +72,10 @@ export function formatSessionDateLong(
         }),
     );
 
-    if (locale === 'nl' || locale.startsWith('nl')) {
+    if (
+        locale === 'nl' ||
+        (typeof locale === 'string' && locale.startsWith('nl'))
+    ) {
         return formatted.replace(
             /(\d+)\s+(\p{L}+)/u,
             (_, day: string, month: string) =>

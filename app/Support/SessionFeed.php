@@ -115,6 +115,7 @@ final class SessionFeed
 
     /**
      * @return array<string, mixed>
+     *                              Host may be null when the organiser account is missing.
      */
     public static function toCard(CommunitySession $session, ?User $viewer, string $locale): array
     {
@@ -125,11 +126,14 @@ final class SessionFeed
             ->values();
 
         $players = $playParticipants
-            ->map(fn ($participant): array => self::player(
-                $participant->user,
-                $session->host_id,
-                $redactNames,
-            ))
+            ->map(fn ($participant): ?array => $participant->user === null
+                ? null
+                : self::player(
+                    $participant->user,
+                    $session->host_id,
+                    $redactNames,
+                ))
+            ->filter()
             ->values()
             ->all();
 
@@ -165,7 +169,9 @@ final class SessionFeed
             'open_slots' => max(0, $session->capacity - $session->participantsCount() - $waitingCount),
             'players' => $players,
             'notes' => $session->translated('notes', $locale),
-            'host' => self::player($session->host, $session->host_id, $redactNames),
+            'host' => $session->host === null
+                ? null
+                : self::player($session->host, $session->host_id, $redactNames),
             'is_full' => $session->isFull(),
             'is_past' => $isPast,
             'is_cancelled' => $session->isCancelled(),
