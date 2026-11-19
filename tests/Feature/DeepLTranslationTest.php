@@ -204,6 +204,32 @@ test('deepl retries after a 429 and then stores the translation', function () {
     Http::assertSentCount(2);
 });
 
+test('the free deepl api does not receive ignore tags', function () {
+    config(['services.deepl.key' => 'test-key:fx', 'services.deepl.host' => null]);
+
+    Http::fake([
+        '*' => Http::response(['translations' => [['text' => 'EN <x id="0">0</x>']]]),
+    ]);
+
+    app(DeepLTranslator::class)->translate('Welcome to Maison Anversa.', 'en');
+
+    Http::assertSent(fn ($request): bool => ! array_key_exists('ignore_tags', $request->data())
+        && ($request->data()['tag_handling'] ?? null) === 'xml');
+});
+
+test('the paid deepl api ignores the brand tag', function () {
+    config(['services.deepl.key' => 'pro-key', 'services.deepl.host' => null]);
+
+    Http::fake([
+        '*' => Http::response(['translations' => [['text' => 'EN <x id="0">0</x>']]]),
+    ]);
+
+    app(DeepLTranslator::class)->translate('Welcome to Maison Anversa.', 'en');
+
+    Http::assertSent(fn ($request): bool => ($request->data()['ignore_tags'] ?? null) === 'x'
+        && str_contains($request->url(), 'api.deepl.com'));
+});
+
 test('deepl keeps the brand spelling in any capitalization', function () {
     config(['services.deepl.key' => 'test-key:fx']);
 

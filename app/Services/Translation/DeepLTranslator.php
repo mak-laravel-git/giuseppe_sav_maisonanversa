@@ -32,6 +32,14 @@ class DeepLTranslator
         return str_ends_with($key, ':fx') ? self::FREE_HOST : self::PAID_HOST;
     }
 
+    /**
+     * ignore_tags is rejected by api-free.deepl.com with HTTP 400.
+     */
+    private function usesFreeHost(): bool
+    {
+        return str_contains($this->host(), 'api-free.deepl.com');
+    }
+
     private function normalizeHost(string $host): string
     {
         $host = rtrim($host, '/');
@@ -96,7 +104,7 @@ class DeepLTranslator
             $payload['tag_handling'] = 'xml';
         }
 
-        if ($protectsBrand) {
+        if ($protectsBrand && ! $this->usesFreeHost()) {
             $payload['ignore_tags'] = 'x';
         }
 
