@@ -69,6 +69,28 @@ test('only the latin woff2 of baskervville 400 and montserrat 300 are preloaded'
     ]);
 });
 
+test('fontsource latin-only variants without unicode ranges preload the woff2', function () {
+    $path = fontManifest([
+        'baskervville' => ['variants' => [
+            '400:normal' => ['files' => [
+                ['file' => 'assets/baskervville-400-normal.woff2', 'format' => 'woff2'],
+                ['file' => 'assets/baskervville-400-normal.woff', 'format' => 'woff'],
+            ]],
+        ]],
+        'montserrat' => ['variants' => [
+            '300:normal' => ['files' => [
+                ['file' => 'assets/montserrat-300-normal.woff2', 'format' => 'woff2'],
+                ['file' => 'assets/montserrat-300-normal.woff', 'format' => 'woff'],
+            ]],
+        ]],
+    ]);
+
+    expect(FontPreloads::latin($path))->toBe([
+        asset('build/assets/baskervville-400-normal.woff2'),
+        asset('build/assets/montserrat-300-normal.woff2'),
+    ]);
+});
+
 test('nothing is preloaded before a build', function () {
     expect(FontPreloads::latin(storage_path('framework/testing/missing.json')))->toBe([]);
 });

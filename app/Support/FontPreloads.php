@@ -8,12 +8,11 @@ use Illuminate\Support\Facades\Vite;
 /**
  * The fonts worth preloading: the two Latin WOFF2 files the first screen is set in.
  *
- * Bunny serves each weight as several unicode-range files (Latin, Latin-ext,
- * Cyrillic, Vietnamese ...). The Vite fonts plugin can only preload a weight as a
- * whole, which was seven requests for fonts most visitors never use. This reads
- * the plugin's build manifest and picks the Latin file of just those two, whatever
- * its hashed file name is after the next build. The other subsets still load, on
- * demand, through the @font-face rules from `@fonts`.
+ * Remote providers may ship each weight as several unicode-range files (Latin,
+ * Latin-ext, Cyrillic, …). Fontsource with `subsets: ['latin']` ships one file
+ * per weight with no unicode-range. This reads the plugin's build manifest and
+ * picks the Latin WOFF2 of just those two, whatever its hashed file name is
+ * after the next build.
  */
 final class FontPreloads
 {
@@ -53,18 +52,44 @@ final class FontPreloads
 
         foreach (self::VARIANTS as $family => $variant) {
             $files = $manifest['families'][$family]['variants'][$variant]['files'] ?? [];
+            $path = self::latinWoff2Path($files);
 
-            foreach ($files as $file) {
-                if (($file['format'] ?? null) === 'woff2'
-                    && str_starts_with($file['unicodeRange'] ?? '', self::LATIN_RANGE_PREFIX)
-                    && isset($file['file'])) {
-                    $urls[] = asset('build/'.$file['file']);
-
-                    break;
-                }
+            if ($path !== null) {
+                $urls[] = asset('build/'.$path);
             }
         }
 
         return $urls;
+    }
+
+    /**
+     * @param  array<int, array{file?: string, format?: string, unicodeRange?: string}>  $files
+     */
+    private static function latinWoff2Path(array $files): ?string
+    {
+        $woff2 = array_values(array_filter(
+            $files,
+            fn (array $file): bool => ($file['format'] ?? null) === 'woff2' && isset($file['file']),
+        ));
+
+        if ($woff2 === []) {
+            return null;
+        }
+
+        $hasRanges = collect($woff2)->contains(
+            fn (array $file): bool => filled($file['unicodeRange'] ?? null),
+        );
+
+        if (! $hasRanges) {
+            return $woff2[0]['file'];
+        }
+
+        foreach ($woff2 as $file) {
+            if (str_starts_with($file['unicodeRange'] ?? '', self::LATIN_RANGE_PREFIX)) {
+                return $file['file'];
+            }
+        }
+
+        return null;
     }
 }

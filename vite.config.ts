@@ -4,7 +4,7 @@ import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
+import { fontsource } from 'laravel-vite-plugin/fonts';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -26,10 +26,12 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
             fonts: [
+                // Self-hosted via Fontsource so Docker/Coolify builds never
+                // fetch fonts.bunny.net (that CDN timed out and failed deploys).
                 // Baskervville ships weight 400 only; headings asking for 500+
                 // are synthesised, matching the prototype. Italic carries the
                 // <em> emphasis used throughout the headings.
-                bunny('Baskervville', {
+                fontsource('Baskervville', {
                     weights: [400],
                     styles: ['normal', 'italic'],
                     subsets: ['latin'],
@@ -38,7 +40,7 @@ export default defineConfig({
                     preload: false,
                     fallbacks: ['Georgia', 'serif'],
                 }),
-                bunny('Montserrat', {
+                fontsource('Montserrat', {
                     weights: [300, 400, 500],
                     styles: ['normal'],
                     subsets: ['latin'],

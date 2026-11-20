@@ -50,8 +50,8 @@ class AddSecurityHeaders
             'https://www.googletagmanager.com',
         ];
 
-        $style = ["'self'", "'unsafe-inline'", 'https://fonts.bunny.net'];
-        $font = ["'self'", 'https://fonts.bunny.net', 'data:'];
+        $style = ["'self'", "'unsafe-inline'"];
+        $font = ["'self'", 'data:'];
         $img = ["'self'", 'data:', 'blob:'];
 
         $connect = [
