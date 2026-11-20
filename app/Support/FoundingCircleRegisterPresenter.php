@@ -212,7 +212,7 @@ class FoundingCircleRegisterPresenter
                 'number' => $number,
                 'sequence' => $sequence,
                 'state' => $archived ? 'archive' : 'available',
-                'label_key' => $archived ? 'Not for sale' : 'Available',
+                'label_key' => $archived ? 'Maison Archive' : 'Available',
                 'name' => null,
                 'year' => null,
                 'italic' => false,

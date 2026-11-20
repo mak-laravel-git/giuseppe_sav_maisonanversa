@@ -156,7 +156,7 @@ export default function CircleRegister({
                                 ['reserved', t('Reserved')],
                                 ['returning', t('Return')],
                                 ['available', t('Available')],
-                                ['archive', t('Not for sale')],
+                                ['archive', t('Maison Archive')],
                             ] as const
                         ).map(([value, label]) => (
                             <Button

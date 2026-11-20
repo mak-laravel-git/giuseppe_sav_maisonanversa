@@ -45,7 +45,7 @@ test('the public register always has one hundred places and hides a private name
             ->where('places.7.name', null)
             ->where('places.7.label_key', 'Private member')
             ->where('places.7.you', false)
-            ->where('places.0.label_key', 'Not for sale')
+            ->where('places.0.label_key', 'Maison Archive')
             ->where('places.1.label_key', 'Available')
             ->where('foundingRegister.inscribed_count', 1)
             ->where('foundingRegister.places_total', 100)
@@ -234,7 +234,7 @@ test('homepage shares register counters and the public page is noindex', functio
         ->toContain('font-sans text-[10px] tracking-[0.16em] text-stone uppercase')
         ->and(file_get_contents(resource_path('js/pages/maison/home.tsx')))->toContain('HomeRegister')
         ->and(file_get_contents(resource_path('js/lib/maison-navigation.ts')))->toContain('/founding-circle/register')
-        ->and(file_get_contents(resource_path('js/components/maison/shell/site-nav.tsx')))->toContain('foundingRegister.inscribed_count');
+        ->and(file_get_contents(resource_path('js/components/maison/shell/site-nav.tsx')))->toContain('foundingRegister?.inscribed_count');
 });
 
 test('a partial notifications reload still shares the register counters the nav reads', function () {
