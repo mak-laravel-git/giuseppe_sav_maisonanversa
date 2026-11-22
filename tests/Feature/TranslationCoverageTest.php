@@ -18,7 +18,7 @@ const COVERAGE_BRAND_KEYS = [
     'Founding Edition',
     'Heritage Certificate',
     'Heritage Letter',
-    'Heritage No.001',
+    'Heritage № 001',
     'Heritage Nº 001',
     'Heritage Passport',
     'Heritage brochures',

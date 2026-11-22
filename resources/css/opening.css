@@ -994,3 +994,73 @@ html[data-opening='seen'] .ma-opening {
         transform: scaleX(0.12);
     }
 }
+
+/*
+ * /huis light guide: same house artwork and window hotspots as the opening,
+ * without the fixed overlay, greeting, or register. Daytime ivory only.
+ */
+.ma-house-page {
+    --ivory: #f3ebe3;
+    --choc: #291c18;
+    --muted: #6e5644;
+    --line: #d8c9b6;
+    --gold: #b2915c;
+    --ink: #5a4739;
+    --lit: 0.25;
+    --lit-key: 0.55;
+
+    color: var(--choc);
+}
+
+.ma-house-page .op-house {
+    width: min(440px, 78vw);
+}
+
+.ma-house-page .op-k {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+}
+
+.house-room-list {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .house-room-list {
+        grid-template-columns: 1fr 1fr;
+        column-gap: 48px;
+    }
+}
+
+.house-room-list a {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-height: 52px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: var(--choc);
+}
+
+.house-room-list a:hover,
+.house-room-list a.hov {
+    color: var(--gold);
+    background: rgb(178 145 92 / 0.1);
+}
+
+.house-room-list a:hover .op-rl-lb,
+.house-room-list a.hov .op-rl-lb,
+.house-room-list a:hover .op-rl-n,
+.house-room-list a.hov .op-rl-n {
+    color: var(--gold);
+}

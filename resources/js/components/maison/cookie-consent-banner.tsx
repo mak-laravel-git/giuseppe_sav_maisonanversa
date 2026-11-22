@@ -54,12 +54,34 @@ export function CookieConsentBanner() {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-subscribing on every form render
     }, [cookieConsent]);
 
-    if (cookieConsent && !forceOpen) {
+    const visible = !cookieConsent || forceOpen;
+
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+
+        // The floating help dock hides itself while the banner is open (see ContactDock).
+        document.documentElement.dataset.cookieBanner = 'open';
+
+        return () => {
+            delete document.documentElement.dataset.cookieBanner;
+        };
+    }, [visible]);
+
+    if (!visible) {
         return null;
     }
 
+    const submit = (analytics: boolean) => {
+        form.transform((data) => ({ ...data, analytics }));
+        form.post(cookieConsentStore.url(), {
+            onSuccess: () => setForceOpen(false),
+        });
+    };
+
     return (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/30 bg-choc p-4 text-cream shadow-lg md:p-6">
+        <div className="fixed inset-x-0 bottom-0 z-[95] border-t border-gold/30 bg-choc p-4 text-cream shadow-lg md:p-6">
             <div className="mx-auto flex max-w-5xl flex-col gap-4 md:flex-row md:items-end">
                 <div className="flex-1">
                     <p className="font-serif text-lg">{t('Cookies')}</p>
@@ -88,18 +110,32 @@ export function CookieConsentBanner() {
                         </label>
                     </div>
                 </div>
-                <MaisonButton
-                    type="button"
-                    variant="gold"
-                    disabled={form.processing}
-                    onClick={() =>
-                        form.post(cookieConsentStore.url(), {
-                            onSuccess: () => setForceOpen(false),
-                        })
-                    }
-                >
-                    {t('Save preferences')}
-                </MaisonButton>
+                <div className="flex flex-wrap gap-3">
+                    <MaisonButton
+                        type="button"
+                        variant="gold"
+                        disabled={form.processing}
+                        onClick={() => submit(form.data.analytics)}
+                    >
+                        {t('Save preferences')}
+                    </MaisonButton>
+                    <MaisonButton
+                        type="button"
+                        variant="gold"
+                        disabled={form.processing}
+                        onClick={() => submit(true)}
+                    >
+                        {t('Accept all')}
+                    </MaisonButton>
+                    <MaisonButton
+                        type="button"
+                        variant="gold"
+                        disabled={form.processing}
+                        onClick={() => submit(false)}
+                    >
+                        {t('Refuse')}
+                    </MaisonButton>
+                </div>
             </div>
         </div>
     );

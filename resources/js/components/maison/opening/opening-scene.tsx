@@ -14,7 +14,7 @@ type OpeningSceneProps = {
     /** End state: no animation (tap, key, scroll, reduced motion). */
     done: boolean;
     onFinish: () => void;
-    /** Replays the animation. Unused while "Open the door again" is commented out. */
+    /** Replays the animation ("Open the door again"). */
     onReplay?: () => void;
     /** The visitor is leaving the opening for another page. */
     onLeave: () => void;
@@ -39,6 +39,7 @@ export function OpeningScene({
     locale,
     done,
     onFinish,
+    onReplay,
     onLeave,
 }: OpeningSceneProps) {
     /** The room whose window is lit: hovered or focused in the house or in the list. */
@@ -136,18 +137,13 @@ export function OpeningScene({
                     />
                 ) : null}
 
-                {/*
-                 * "Open the door again": switched off for now. To bring it
-                 * back, uncomment this and destructure `onReplay` above.
-                 *
-                 * <button
-                 *     type="button"
-                 *     className="op-replay op-in op-t3"
-                 *     onClick={onReplay}
-                 * >
-                 *     {copy.replay}
-                 * </button>
-                 */}
+                <button
+                    type="button"
+                    className="op-replay op-in op-t3"
+                    onClick={onReplay}
+                >
+                    {copy.replay}
+                </button>
 
                 <RoomList
                     copy={copy}

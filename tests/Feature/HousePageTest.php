@@ -1,35 +1,46 @@
 <?php
 
-test('the house page renders eight crawlable room links', function () {
+test('the house page renders the light house guide', function () {
     $this->get('/nl/huis')
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('maison/house'));
 
-    $source = file_get_contents(resource_path('js/components/maison/house/maison-floorplan.tsx'));
-    $list = file_get_contents(resource_path('js/components/maison/house/maison-room-list.tsx'));
-
-    foreach (['home', 'contact', 'story', 'community', 'circle', 'journal', 'corner'] as $page) {
-        expect($source)->toContain("to=\"{$page}\"")
-            ->and($list)->toContain("to: '{$page}'");
-    }
-
-    expect($source)->toContain('foundingProductUrl')
-        ->and($list)->toContain('foundingProductUrl');
-});
-
-test('rooms are SVG anchors rather than onclick handlers on groups', function () {
-    $source = file_get_contents(resource_path('js/components/maison/house/floorplan-room.tsx'));
-
-    expect($source)
-        ->toContain('<a href={href}')
-        ->toContain('usePageTransition')
-        ->not->toContain('onclick=');
-});
-
-test('the house floorplan is shown at every viewport', function () {
     $page = file_get_contents(resource_path('js/pages/maison/house.tsx'));
+    $guide = file_get_contents(resource_path('js/components/maison/house/maison-house-guide.tsx'));
 
-    expect($page)->toContain('<MaisonFloorplan />')
-        ->and($page)->not->toContain('max-[640px]:hidden')
-        ->and($page)->toMatch('/\{\/\*[\s\S]*<MaisonRoomList \/>[\s\S]*\*\//');
+    expect($page)
+        ->toContain('<MaisonHouseGuide />')
+        ->toContain('tone="cream"')
+        ->not->toContain('<MaisonFloorplan />')
+        ->and($guide)->toContain('doorHouseArt')
+        ->and($guide)->toContain('RoomWindow')
+        ->and($guide)->toContain('OPENING_ROOMS')
+        ->and($guide)->toContain('HOUSE_LIST_ORDER');
+});
+
+test('the house guide keeps opening window hotspots and remaps list numerals', function () {
+    $guide = file_get_contents(resource_path('js/components/maison/house/maison-house-guide.tsx'));
+
+    expect($guide)
+        ->toContain("display: 'I', opening: 'VI'")
+        ->toContain("display: 'II', opening: 'VII'")
+        ->toContain("display: 'III', opening: 'VIII'")
+        ->toContain("display: 'IV', opening: 'III'")
+        ->toContain("display: 'V', opening: 'IV'")
+        ->toContain("display: 'VI', opening: 'V'")
+        ->toContain("display: 'VII', opening: 'I'")
+        ->toContain("display: 'VIII', opening: 'II'")
+        ->toContain('roomHref')
+        ->not->toContain('MaisonFloorplan');
+});
+
+test('the house page has no greeting, register, or entrance animation', function () {
+    $page = file_get_contents(resource_path('js/pages/maison/house.tsx'));
+    $guide = file_get_contents(resource_path('js/components/maison/house/maison-house-guide.tsx'));
+
+    expect($page.$guide)
+        ->not->toContain('OpeningRegister')
+        ->not->toContain('op-greeting')
+        ->not->toContain('maison-facade')
+        ->and($guide)->toContain('is-done');
 });

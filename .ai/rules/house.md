@@ -5,5 +5,5 @@ paths:
 
 # House
 
-## House floorplan on every viewport
-The eight-room SVG elevation on /huis is the navigation at every breakpoint, including mobile. Do not hide it with max-[640px]:hidden. MaisonRoomList is kept commented in house.tsx as a fallback — do not re-enable it as the mobile-only view unless asked.
+## /huis reuses the intro's light house
+The storefront House page uses the opening's door-house SVG and RoomWindow hotspots on Warm Ivory, with no greeting, register, or entrance animation (`is-done`). Room list order is the client's Roman sequence (I Bibliothèque … VIII Bureau), remapped onto OPENING_ROOMS so `.lw0`–`.lw7` stay correct. Do not bring back MaisonFloorplan as the primary /huis navigation.

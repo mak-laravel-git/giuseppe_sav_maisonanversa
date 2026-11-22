@@ -76,6 +76,9 @@ test('the cookie banner has no marketing preference', function () {
         ->toContain('Necessary')
         ->toContain('Analytics load only after your consent')
         ->toContain('COOKIE_SETTINGS_EVENT')
+        ->toContain("t('Accept all')")
+        ->toContain("t('Refuse')")
+        ->toContain("t('Save preferences')")
         ->not->toContain('marketing')
         ->not->toContain('Marketing');
 });

@@ -38,6 +38,22 @@ class StoryPage extends Model
     ];
 
     /**
+     * Court / "de baan" copy: EN/FR are curated by hand (Admin Story translations
+     * or a data migration). DeepL must not overwrite them — it mistranslates
+     * "de baan" as job/track/course.
+     *
+     * @var list<string>
+     */
+    public const MANUALLY_CURATED_COLUMNS = [
+        'hero_body',
+        'ritual_step_4_title',
+        'ritual_step_4_body',
+        'ritual_footer',
+        'origins_italic',
+        'founder_paragraph_two',
+    ];
+
+    /**
      * Uploaded photographs. Empty means the storefront keeps its current brand image.
      *
      * @var list<string>
@@ -132,6 +148,7 @@ class StoryPage extends Model
     protected array $translationExcept = [
         ...self::VISIBLE_COLUMNS,
         ...self::UNTRANSLATED_COLUMNS,
+        ...self::MANUALLY_CURATED_COLUMNS,
         ...self::IMAGE_COLUMNS,
     ];
 

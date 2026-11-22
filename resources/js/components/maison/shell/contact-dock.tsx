@@ -85,7 +85,7 @@ export function ContactDock() {
     return (
         <div ref={panel}>
             {open && (
-                <div className="fixed right-4 bottom-20 z-91 w-77 max-w-[calc(100vw-32px)] rounded-2xl border border-gold/30 bg-[#241a14] px-4 pt-4.5 pb-3.5 shadow-[0_14px_44px_rgba(0,0,0,0.6)] ma-sm:right-6.5 ma-sm:bottom-25">
+                <div className="fixed right-4 bottom-20 z-91 in-data-[cookie-banner=open]:hidden w-77 max-w-[calc(100vw-32px)] rounded-2xl border border-gold/30 bg-[#241a14] px-4 pt-4.5 pb-3.5 shadow-[0_14px_44px_rgba(0,0,0,0.6)] ma-sm:right-6.5 ma-sm:bottom-25">
                     <div className="mb-3 flex items-center justify-between px-1">
                         <span className="font-serif text-base text-cream">
                             {t('How can we help you?')}
@@ -166,7 +166,7 @@ export function ContactDock() {
                 aria-label={t('Maison Anversa — help')}
                 aria-expanded={open}
                 onClick={() => setOpen((wasOpen) => !wasOpen)}
-                className="fixed right-4 bottom-4 z-90 flex size-13 items-center justify-center rounded-full border-[1.5px] border-gold bg-choc shadow-[0_8px_30px_rgba(0,0,0,0.55)] transition-transform hover:-translate-y-0.5 hover:scale-104 ma-sm:right-6.5 ma-sm:bottom-6.5 ma-sm:size-15.5"
+                className="fixed right-4 bottom-4 z-90 flex size-13 in-data-[cookie-banner=open]:hidden items-center justify-center rounded-full border-[1.5px] border-gold bg-choc shadow-[0_8px_30px_rgba(0,0,0,0.55)] transition-transform hover:-translate-y-0.5 hover:scale-104 ma-sm:right-6.5 ma-sm:bottom-6.5 ma-sm:size-15.5"
             >
                 <span
                     aria-hidden="true"

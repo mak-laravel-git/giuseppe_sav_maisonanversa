@@ -49,8 +49,14 @@ createInertiaApp({
                 </ErrorBoundary>
                 <Toaster
                     position="bottom-right"
-                    richColors
                     closeButton
+                    toastOptions={{
+                        classNames: {
+                            // Brand colours instead of Sonner's green: no green on the site.
+                            success:
+                                '!border-[#B2915C] !bg-[#291C18] !text-[#F3EBE3] [&_[data-icon]]:!text-[#B2915C] [&_[data-close-button]]:!border-[#B2915C] [&_[data-close-button]]:!bg-[#291C18] [&_[data-close-button]]:!text-[#F3EBE3]',
+                        },
+                    }}
                     expand={true}
                     duration={3000}
                     icons={{

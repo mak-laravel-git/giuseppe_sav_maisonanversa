@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { MaisonFloorplan } from '@/components/maison/house/maison-floorplan';
-// import { MaisonRoomList } from '@/components/maison/house/maison-room-list';
-import { PlaceholderImage } from '@/components/maison/placeholder-image';
+import { MaisonHouseGuide } from '@/components/maison/house/maison-house-guide';
 import { MaisonSeoHead } from '@/components/maison/seo/maison-seo-head';
 import { GoldRule } from '@/components/maison/ui/gold-rule';
 import { Section, Wrap } from '@/components/maison/ui/section';
 
+/**
+ * /huis — light house guide matching the intro illustration (Warm Ivory,
+ * Deep Chocolate lines). No greeting, register, or entrance animation.
+ */
 export default function House() {
     const { t } = useTranslation();
 
@@ -13,55 +15,28 @@ export default function House() {
         <>
             <MaisonSeoHead />
 
-            <Section tone="dark" className="text-center">
-                <Wrap>
-                    <PlaceholderImage
-                        asset="maison-facade"
-                        ratio={null}
-                        alt="Maison Anversa"
-                        captioned={false}
-                        className="mx-auto mb-1.5 w-[min(340px,72vw)] opacity-94 drop-shadow-[0_6px_30px_rgba(0,0,0,0.4)]"
-                    />
-                    <h1 className="mt-3.5 font-serif text-[clamp(36px,5vw,56px)] leading-[1.1] font-normal text-cream">
+            <Section tone="cream" className="text-center">
+                <Wrap className="max-w-200">
+                    <p className="font-sans text-[9px] font-light tracking-[0.4em] text-choc/55 uppercase">
+                        Maison Anversa
+                    </p>
+                    <h1 className="mt-3.5 font-serif text-[clamp(36px,5vw,56px)] leading-[1.1] font-normal text-choc">
                         {t('The House')}
                     </h1>
                     <GoldRule center className="mx-auto" />
-                    <p className="mx-auto mt-5 max-w-160 text-[15px] leading-[1.85] text-sand">
+                    <p className="mx-auto mt-5 max-w-140 text-[15px] leading-[1.85] text-choc3">
                         {t(
-                            'Eight rooms, eight chapters. Step inside by clicking on a space — each room takes you to a part of the house.',
+                            'Eight rooms, eight chapters. Click a window to enter: each room takes you to a part of the house.',
                         )}
                     </p>
                 </Wrap>
             </Section>
 
-            <Section tone="dark" padded={false} className="pb-22.5">
-                <Wrap className="max-w-260 max-[640px]:px-3">
-                    <MaisonFloorplan />
-
-                    {/* Mobile room list — kept as a fallback; the floorplan now shows at every width.
-                    <MaisonRoomList />
-                    */}
-
-                    <div className="mt-10 flex flex-wrap justify-center gap-x-7 gap-y-3.5">
-                        <LegendItem>
-                            {t('Click a room to enter')}
-                        </LegendItem>
-                        <LegendItem>{t('8 rooms · 1 house')}</LegendItem>
-                    </div>
+            <Section tone="cream" padded={false} className="pb-22.5">
+                <Wrap className="max-w-200">
+                    <MaisonHouseGuide />
                 </Wrap>
             </Section>
         </>
-    );
-}
-
-function LegendItem({ children }: { children: string }) {
-    return (
-        <div className="flex items-center gap-2.5 font-sans text-[9px] tracking-[0.2em] text-sand uppercase">
-            <span
-                aria-hidden="true"
-                className="size-2 rotate-45 border border-gold"
-            />
-            {children}
-        </div>
     );
 }
