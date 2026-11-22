@@ -377,10 +377,6 @@ Route::prefix('{locale}')
             });
         });
 
-        // ── Demo landing page ─────────────────────────────────────────────────────
-        Route::get('/file-upload-demo', [FileUploadDemoController::class, 'index'])
-            ->name('file-upload-demo.index')->middleware('permission:'.PermissionEnum::FILE_UPLOAD_INDEX->value);
-
         // ── Single / multiple file upload (used by demos 1 & 2) ──────────────────
         Route::post('/upload', [FileUploadDemoController::class, 'store'])
             ->name('upload.store')->middleware('permission:'.PermissionEnum::FILE_UPLOAD_STORE->value);

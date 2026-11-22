@@ -3,49 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attachment;
-use App\Models\Post;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
- * FileUploadDemoController
- * ─────────────────────────────────────────────────────────────────────────────
- * Handles the all-features demo page and the shared upload endpoint used by
- * demo §1 (single / aggregate) and §2 (per-file / individual progress).
+ * Shared upload endpoint used by the attachment demos.
  */
 class FileUploadDemoController extends Controller
 {
-    // ── Demo landing page ─────────────────────────────────────────────────────
-
-    public function index(string $locale): Response
-    {
-        $demoPost = Post::with('attachments')
-            ->latest()
-            ->firstOrCreate(
-                ['title' => 'Demo post'],
-                ['title' => 'Demo post'],
-            );
-
-        $attachments = $demoPost->attachments->map(fn (Attachment $a) => [
-            'id' => $a->id,
-            'path' => $a->path,
-            'url' => $a->url,           // accessor → full public URL
-            'mime_type' => $a->mime_type,
-            'name' => $a->original_name,
-            'size' => $a->size,
-        ]);
-
-        return Inertia::render('file-upload-demo', [
-            'demoPost' => [
-                'id' => $demoPost->id,
-                'title' => $demoPost->title,
-                'attachments' => $attachments,
-            ],
-        ]);
-    }
-
     // ── Shared upload endpoint (demos §1 & §2) ────────────────────────────────
 
     /**
