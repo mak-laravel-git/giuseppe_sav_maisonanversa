@@ -18,7 +18,7 @@ type RoomLinkProps = {
 /**
  * A window of the house: a real link over the artwork, straight to the room's
  * page. Hover or keyboard focus lights the window (the scene does that through
- * `hovered`) and shows a small label above it, e.g. "Bibliothèque · Journal".
+ * `hovered`) and shows a small label above it, e.g. "Bibliothèque - Journal".
  */
 export function RoomWindow({
     room,
@@ -48,7 +48,7 @@ export function RoomWindow({
             }}
         >
             <span className="op-tip" aria-hidden="true">
-                {text.name} · {text.subtitle}
+                {text.name} - {text.subtitle}
             </span>
         </MaisonLink>
     );

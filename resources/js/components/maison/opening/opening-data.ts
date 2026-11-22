@@ -204,7 +204,6 @@ export type OpeningCopy = {
     /** `{total}` is the size of the edition, `{n}` the count of numbers still available. */
     limit: string;
     skip: string;
-    replay: string;
     registerTitle: string;
     available: string;
     reserved: string;
@@ -255,7 +254,6 @@ export const OPENING_COPY: Record<Locale, OpeningCopy> = {
         },
         limit: 'Beperkt tot {total} genummerde rackets · nog {n} nummers vrij',
         skip: 'Overslaan',
-        replay: 'Open de deur opnieuw',
         registerTitle: 'Het register',
         available: 'Beschikbaar',
         reserved: 'Gereserveerd',
@@ -288,7 +286,6 @@ export const OPENING_COPY: Record<Locale, OpeningCopy> = {
         },
         limit: 'Limited to {total} numbered rackets · {n} numbers available',
         skip: 'Skip',
-        replay: 'Open the door again',
         registerTitle: 'The register',
         available: 'Available',
         reserved: 'Reserved',
@@ -320,7 +317,6 @@ export const OPENING_COPY: Record<Locale, OpeningCopy> = {
         },
         limit: 'Édition limitée à {total} raquettes numérotées · encore {n} numéros disponibles',
         skip: 'Passer',
-        replay: 'Rouvrir la porte',
         registerTitle: 'Le registre',
         available: 'Disponible',
         reserved: 'Réservé',

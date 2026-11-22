@@ -287,7 +287,7 @@ test('a window and a room name are links straight to the room page, with a label
     expect(substr_count($rooms, 'href={roomHref(room, locale)}'))->toBe(2)
         ->and(substr_count($rooms, 'onClick={onLeave}'))->toBe(2)
         ->and($rooms)->toContain('aria-label={`${text.name}, ${text.subtitle}`}')
-        ->toContain('{text.name} · {text.subtitle}')
+        ->toContain('{text.name} - {text.subtitle}')
         ->not->toContain('role="dialog"');
 
     // The label shows on hover, on keyboard focus and when the list row is hovered.

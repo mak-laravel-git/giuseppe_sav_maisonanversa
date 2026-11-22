@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { MaisonHouseGuide } from '@/components/maison/house/maison-house-guide';
 import { MaisonSeoHead } from '@/components/maison/seo/maison-seo-head';
-import { GoldRule } from '@/components/maison/ui/gold-rule';
 import { Section, Wrap } from '@/components/maison/ui/section';
 
 /**
@@ -23,7 +22,6 @@ export default function House() {
                     <h1 className="mt-3.5 font-serif text-[clamp(36px,5vw,56px)] leading-[1.1] font-normal text-choc">
                         {t('The House')}
                     </h1>
-                    <GoldRule center className="mx-auto" />
                     <p className="mx-auto mt-5 max-w-140 text-[15px] leading-[1.85] text-choc3">
                         {t(
                             'Eight rooms, eight chapters. Click a window to enter: each room takes you to a part of the house.',
@@ -33,7 +31,7 @@ export default function House() {
             </Section>
 
             <Section tone="cream" padded={false} className="pb-22.5">
-                <Wrap className="max-w-200">
+                <Wrap className="max-w-240">
                     <MaisonHouseGuide />
                 </Wrap>
             </Section>

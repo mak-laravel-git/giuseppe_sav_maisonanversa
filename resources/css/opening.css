@@ -237,9 +237,8 @@ html[data-opening='seen'] .ma-opening {
 }
 
 .op-lang button:focus-visible,
-.op-skip:focus-visible,
 .op-page:focus-visible,
-.op-replay:focus-visible {
+.op-skip:focus-visible {
     outline: 2px solid var(--choc);
     outline-offset: 2px;
 }
@@ -343,24 +342,6 @@ html[data-opening='seen'] .ma-opening {
     font-size: 13px;
     letter-spacing: 0.08em;
     color: var(--choc);
-}
-
-.op-replay {
-    align-self: flex-start;
-    background: none;
-    border: 0;
-    padding: 12px 0;
-    min-height: 44px;
-    font:
-        500 11px Montserrat,
-        system-ui,
-        sans-serif;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 4px;
 }
 
 /* ---------- the animation ---------- */
@@ -1034,22 +1015,43 @@ html[data-opening='seen'] .ma-opening {
     grid-template-columns: 1fr;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
     .house-room-list {
         grid-template-columns: 1fr 1fr;
-        column-gap: 48px;
+        column-gap: 40px;
     }
 }
 
 .house-room-list a {
     display: flex;
     align-items: baseline;
-    gap: 16px;
+    gap: 12px;
     min-height: 52px;
     padding: 12px 4px;
     border-bottom: 1px solid var(--line);
     text-decoration: none;
     color: var(--choc);
+}
+
+.house-room-list .op-rl-n {
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+}
+
+.house-room-list .op-rl-nm {
+    flex: 1 1 auto;
+    font-size: clamp(17px, 2.1vw, 21px);
+    white-space: nowrap;
+}
+
+.house-room-list .op-rl-lb {
+    flex: 0 1 auto;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+}
+
+.house-room-list .op-rl-ar {
+    flex: 0 0 auto;
 }
 
 .house-room-list a:hover,

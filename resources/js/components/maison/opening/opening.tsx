@@ -108,7 +108,6 @@ export function Opening() {
     const [open, setOpen] = useState(true);
     const [leaving, setLeaving] = useState(false);
     const [done, setDone] = useState(false);
-    const [replays, setReplays] = useState(0);
 
     const leaveTimer = useRef<number | null>(null);
     const overlay = useRef<HTMLDivElement>(null);
@@ -161,11 +160,6 @@ export function Opening() {
 
     const finish = useCallback(() => setDone(true), []);
 
-    function replay() {
-        setDone(false);
-        setReplays((count) => count + 1);
-    }
-
     useEffect(() => {
         if (!open) {
             return;
@@ -209,12 +203,10 @@ export function Opening() {
 
                 <div className="op-stage">
                     <OpeningScene
-                        key={replays}
                         copy={copy}
                         locale={locale}
                         done={done}
                         onFinish={finish}
-                        onReplay={replay}
                         onLeave={dismiss}
                     />
                 </div>
