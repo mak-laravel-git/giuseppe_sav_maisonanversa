@@ -129,14 +129,6 @@ export function OpeningScene({
                     ) : null}
                 </header>
 
-                {register !== null ? (
-                    <OpeningRegister
-                        copy={copy}
-                        register={register}
-                        onLeave={onLeave}
-                    />
-                ) : null}
-
                 <button
                     type="button"
                     className="op-replay op-in op-t3"
@@ -144,6 +136,14 @@ export function OpeningScene({
                 >
                     {copy.replay}
                 </button>
+
+                {register !== null ? (
+                    <OpeningRegister
+                        copy={copy}
+                        register={register}
+                        onLeave={onLeave}
+                    />
+                ) : null}
 
                 <RoomList
                     copy={copy}
