@@ -238,7 +238,8 @@ html[data-opening='seen'] .ma-opening {
 
 .op-lang button:focus-visible,
 .op-page:focus-visible,
-.op-skip:focus-visible {
+.op-skip:focus-visible,
+.op-replay:focus-visible {
     outline: 2px solid var(--choc);
     outline-offset: 2px;
 }
@@ -342,6 +343,24 @@ html[data-opening='seen'] .ma-opening {
     font-size: 13px;
     letter-spacing: 0.08em;
     color: var(--choc);
+}
+
+.op-replay {
+    align-self: center;
+    background: none;
+    border: 0;
+    padding: 0;
+    min-height: 44px;
+    font:
+        500 11px Montserrat,
+        system-ui,
+        sans-serif;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }
 
 /* ---------- the animation ---------- */
