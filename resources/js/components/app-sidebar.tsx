@@ -99,12 +99,13 @@ function buildNavGroups(
                     href: adminNotifications.index(locale),
                     icon: Bell,
                 },
-                {
-                    title: t('Test notifications'),
-                    href: adminNotificationTest.index(locale),
-                    icon: BellRing,
-                    permissions: [PERMISSIONS.NOTIFICATIONS.TEST],
-                },
+                // Debug-only: keep for future notification testing
+                // {
+                //     title: t('Test notifications'),
+                //     href: adminNotificationTest.index(locale),
+                //     icon: BellRing,
+                //     permissions: [PERMISSIONS.NOTIFICATIONS.TEST],
+                // },
                 {
                     title: t('Reverb Server'),
                     href: adminServersMaintenance.index(locale),
