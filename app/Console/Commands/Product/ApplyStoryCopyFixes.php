@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * the Dutch source, every other column and every other page stay untouched. The
  * rows carry the current source hash, so DeepL does not translate them again.
  */
-#[Signature('story:apply-copy-fixes {--file= : JSON file with the lines to replace} {--dry-run : Show what would change without writing}')]
+#[Signature('story:apply-copy-fixes {--file= : JSON file with the lines to replace} {--dry-run : Show what would change without writing} {--diff : Print the current text next to the new text for every line that changes}')]
 #[Description('Replace the listed Our Story EN/FR lines with the client-approved wording')]
 class ApplyStoryCopyFixes extends Command
 {
@@ -62,9 +62,16 @@ class ApplyStoryCopyFixes extends Command
 
                 $status = match (true) {
                     $current === $fix['to'] => 'already approved',
+                    $current === null => 'update (no row yet: the page shows the source text)',
                     $this->same((string) $current, $fix['from']) => 'update',
                     default => 'update (differs from the list)',
                 };
+
+                if ($this->option('diff') && $current !== $fix['to']) {
+                    $this->line("<fg=yellow>{$locale} · {$column}</>");
+                    $this->line('  now: '.($current ?? '(no row)'));
+                    $this->line('  new: '.$fix['to']);
+                }
 
                 $rows[] = [$locale, $column, $status];
 
