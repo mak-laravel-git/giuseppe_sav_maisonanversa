@@ -1,0 +1,218 @@
+{
+    "en": {
+        "city_body_one": {
+            "from": "Every day starts the same way here. A coffee whilst the city slowly wakes up. The first tram passes by, shops open, and outdoor seating areas are set up.",
+            "to": "Every day here begins the same way. A coffee while the city slowly wakes up. The first tram passes by, shops open, terraces are set out."
+        },
+        "city_body_two": {
+            "from": "Antwerp has always looked outwards. A port city where trade, culture, fashion and ideas converge. Steeped in history, yet ever-evolving. European, yet with a character all of its own.",
+            "to": "Antwerp has always looked outward. A port city where trade, culture, fashion and ideas meet. Historic without standing still. European, but with a character of its own."
+        },
+        "city_closer": {
+            "from": "That’s where Maison Anversa begins.",
+            "to": "That is where Maison Anversa begins."
+        },
+        "ritual_title": {
+            "from": "Style doesn’t end where sport begins.",
+            "to": "Style doesn't stop where sport begins."
+        },
+        "ritual_footer": {
+            "from": "For us, those moments all go hand in hand. The coffee before, the chat afterwards, and everything you wear, from the terrace to the court.",
+            "to": "For us, these moments belong together. The coffee before, the conversation after, and everything you wear, from the terrace to the court."
+        },
+        "origins_eyebrow": {
+            "from": "03 · How it all began",
+            "to": "03 · How it began"
+        },
+        "origins_lead": {
+            "from": "Maison Anversa didn’t come about as a result of a business plan, but from things I’ve loved for years.",
+            "to": "Maison Anversa did not grow out of a business plan, but out of things I have loved for years."
+        },
+        "origins_body": {
+            "from": "For a long time, they were separate from one another. Until I discovered padel and began to wonder why the world of sport often feels so different from the world outside it.",
+            "to": "For a long time, they stood apart. Until I discovered padel and began to wonder why the world around sport often feels so different from the world beyond it."
+        },
+        "origins_italic": {
+            "from": "Why should style stop just because you’ve left the court?",
+            "to": "Why should style stop when you step onto the court?"
+        },
+        "origins_close": {
+            "from": "That is how the idea for Maison Anversa came about: a single space where sport, style, culture and craftsmanship come together.",
+            "to": "That is how the idea for Maison Anversa was born: one house where sport, style, culture and craftsmanship come together."
+        },
+        "name_body": {
+            "from": "Anversa is the Italian name for Antwerp. We chose it for a city that has always looked beyond its borders, and for a house with roots in Antwerp and a view of Europe.",
+            "to": "Anversa is the Italian name for Antwerp. We chose it for a city that has always looked beyond its borders, and for a house with roots in Antwerp and its eyes on Europe."
+        },
+        "make_body_one": {
+            "from": "Our first chapter: a padel racket produced in a limited edition of one hundred. Each racket will be given its own number, a certificate, a passport and a letter. Not because we have to, but because a first product deserves a first chapter.",
+            "to": "Our first chapter: a padel racket in an edition of one hundred. Each piece receives its own number, a certificate, a passport and a letter. Not because it has to, but because a first product deserves a first chapter."
+        },
+        "make_body_two": {
+            "from": "The first hundred copies together form the Founding Circle — numbered from 001 to 100 and recorded in the house register.",
+            "to": "The first hundred pieces together form the Founding Circle — numbered from 001 to 100 and recorded in the register of the House."
+        },
+        "quote_line": {
+            "from": "Padel is where we started. It’s not where we’ll end.",
+            "to": "Padel is our beginning. Not our end."
+        },
+        "founder_paragraph_one": {
+            "from": "I’ve always loved things that are made with care. Clothes that last for years. Old buildings and the stories behind them. Coffee, cities and, of course, sport.",
+            "to": "I have always loved things that are made with care. Clothes that last for years. Old buildings and the stories behind them. Coffee, cities and, of course, sport."
+        },
+        "founder_paragraph_two": {
+            "from": "When I started playing padel, I noticed something. The world I loved off the court was hardly reflected on it.",
+            "to": "When I started playing padel, I noticed something. The world I found beautiful off the court, I hardly found on the court."
+        },
+        "founder_paragraph_three": {
+            "from": "That is where Maison Anversa was founded.",
+            "to": "That is where Maison Anversa began."
+        },
+        "founder_paragraph_four": {
+            "from": "Not with the aim of simply making a racket, but to build a world centred on sport, step by step — with a focus on design, materials, culture and the moments surrounding the game.",
+            "to": "Not with the idea of simply making a racket, but of building a house around sport, step by step — with attention to design, materials, culture and the moments around the game."
+        },
+        "founder_paragraph_five": {
+            "from": "We’re starting with padel. With a hundred rackets.",
+            "to": "We begin with padel. With one hundred rackets."
+        },
+        "founder_paragraph_six": {
+            "from": "I don’t know yet where it will end. And perhaps that’s precisely what makes it so wonderful.",
+            "to": "Where it ends, I don't know yet. And perhaps that is exactly what makes it beautiful."
+        },
+        "closing_place": {
+            "from": "Antwerp, Belgium · Established in 2026",
+            "to": "Antwerp, Belgium · Est. 2026"
+        },
+        "ritual_step_1_title": {
+            "from": "Getting dressed",
+            "to": "Dressing"
+        },
+        "ritual_step_2_body": {
+            "from": "On a terrace, as the city wakes up.",
+            "to": "On a terrace, while the city wakes up."
+        },
+        "ritual_step_3_body": {
+            "from": "Have a look around. See, listen and taste.",
+            "to": "A short walk. Looking, listening, tasting."
+        },
+        "hero_title": {
+            "from": "It all starts with",
+            "to": "Everything begins with"
+        }
+    },
+    "fr": {
+        "hero_body": {
+            "from": "Le café. Le style. La ville. Et puis le terrain.",
+            "to": "Café. Style. La ville. Puis le terrain."
+        },
+        "city_body_one": {
+            "from": "Ici, chaque journée commence de la même manière. Un café pendant que la ville s'éveille peu à peu. Le premier tram passe, les magasins ouvrent, les terrasses sont installées.",
+            "to": "Ici, chaque journée commence de la même façon. Un café pendant que la ville s'éveille lentement. Le premier tram passe, les boutiques ouvrent, les terrasses s'installent."
+        },
+        "city_body_two": {
+            "from": "Anvers a toujours été tournée vers l'extérieur. Une ville portuaire où se croisent le commerce, la culture, la mode et les idées. Ancrée dans l'histoire sans pour autant rester figée. Européenne, mais dotée d'une identité propre.",
+            "to": "Anvers a toujours regardé vers l'extérieur. Une ville portuaire où se rencontrent le commerce, la culture, la mode et les idées. Historique sans rester immobile. Européenne, mais avec un caractère bien à elle."
+        },
+        "ritual_title": {
+            "from": "Le style ne s'arrête pas là où commence le sport.",
+            "to": "Le style ne s'arrête pas là où le sport commence."
+        },
+        "ritual_footer": {
+            "from": "Pour nous, ces moments vont de pair. Le café avant, la conversation après, et tout ce que vous portez, de la terrasse jusqu'au court.",
+            "to": "Pour nous, ces moments vont ensemble. Le café avant, la conversation après, et tout ce que vous portez, de la terrasse au terrain."
+        },
+        "origins_eyebrow": {
+            "from": "03 · Comment tout a commencé",
+            "to": "03 · Les origines"
+        },
+        "origins_body": {
+            "from": "Pendant longtemps, ces deux mondes étaient bien distincts. Jusqu’à ce que je découvre le padel et que je commence à me demander pourquoi l’univers du sport semble souvent si différent du monde extérieur.",
+            "to": "Pendant longtemps, elles sont restées séparées. Jusqu'à ce que je découvre le padel et que je commence à me demander pourquoi l'univers du sport semble souvent si différent du monde qui l'entoure."
+        },
+        "origins_italic": {
+            "from": "Pourquoi renoncer au style quand on quitte le terrain ?",
+            "to": "Pourquoi le style s'arrêterait-il au moment où l'on entre sur le terrain ?"
+        },
+        "origins_close": {
+            "from": "C'est ainsi qu'est née l'idée de Maison Anversa : un lieu unique où se mêlent sport, style, culture et savoir- faire.",
+            "to": "C'est ainsi qu'est née l'idée de Maison Anversa : une seule maison où se rejoignent le sport, le style, la culture et le savoir-faire."
+        },
+        "name_body": {
+            "from": "« Anversa » est le nom italien d'Anvers. Nous l'avons choisi pour une ville qui a toujours regardé au-delà de ses frontières, et pour une maison ancrée à Anvers mais tournée vers l'Europe.",
+            "to": "Anversa est le nom italien d'Anvers. Nous l'avons choisi pour une ville qui a toujours regardé au-delà de ses frontières, et pour une maison enracinée à Anvers, le regard tourné vers l'Europe."
+        },
+        "make_eyebrow": {
+            "from": "05 · Ce que nous fabriquons",
+            "to": "05 · Ce que nous créons"
+        },
+        "make_body_one": {
+            "from": "Notre premier chapitre : une raquette de padel éditée à cent exemplaires. Chaque exemplaire sera doté d'un numéro unique, d'un certificat, d'un passeport et d'une lettre. Non pas parce que c'est obligatoire, mais parce qu'un premier produit mérite un premier chapitre.",
+            "to": "Notre premier chapitre : une raquette de padel en édition limitée à cent exemplaires. Chaque pièce reçoit son propre numéro, un certificat, un passeport et une lettre. Non par obligation, mais parce qu'un premier produit mérite un premier chapitre."
+        },
+        "make_body_two": {
+            "from": "Les cent premiers exemplaires constituent ensemble le « Founding Circle » — numérotés de 001 à 100 et inscrits dans le registre de la maison.",
+            "to": "Les cent premiers exemplaires forment ensemble le Founding Circle — numérotés de 001 à 100 et consignés dans le registre de la Maison."
+        },
+        "make_button_label": {
+            "from": "Découvrez Heritage Nº 001",
+            "to": "Découvrir Heritage Nº 001"
+        },
+        "quote_line": {
+            "from": "Le padel, c'est notre point de départ. Pas notre point d'arrivée.",
+            "to": "Le padel est notre commencement. Pas notre fin."
+        },
+        "founder_paragraph_one": {
+            "from": "J'ai toujours aimé les choses fabriquées avec soin. Les vêtements qui durent des années. Les vieux bâtiments et les histoires qui s'y cachent. Le café, les villes et, bien sûr, le sport.",
+            "to": "J'ai toujours aimé les choses faites avec attention. Les vêtements qui durent des années. Les vieux bâtiments et les histoires qu'ils racontent. Le café, les villes et, bien sûr, le sport."
+        },
+        "founder_paragraph_two": {
+            "from": "Quand j'ai commencé à jouer au padel, j'ai remarqué quelque chose. Le monde que j'aimais en dehors du terrain, je ne le retrouvais pratiquement pas sur le terrain.",
+            "to": "Quand j'ai commencé à jouer au padel, j'ai remarqué quelque chose. Le monde que je trouvais beau en dehors du terrain, je ne le retrouvais presque pas sur le terrain."
+        },
+        "founder_paragraph_three": {
+            "from": "C'est là qu'est née la Maison Anversa.",
+            "to": "C'est là qu'est née Maison Anversa."
+        },
+        "founder_paragraph_four": {
+            "from": "Non pas dans l'idée de fabriquer une raquette comme ça, mais de construire, étape par étape, un univers autour du sport — en accordant une attention particulière au design, aux matériaux, à la culture et aux moments qui entourent le jeu.",
+            "to": "Pas avec l'idée de simplement fabriquer une raquette, mais de construire, pas à pas, une maison autour du sport — avec une attention particulière au design, aux matériaux, à la culture et aux moments qui entourent le jeu."
+        },
+        "founder_paragraph_five": {
+            "from": "On commence par le padel. Avec une centaine de raquettes.",
+            "to": "Nous commençons par le padel. Avec cent raquettes."
+        },
+        "founder_paragraph_six": {
+            "from": "Je ne sais pas encore où cela va finir. Et c'est peut-être justement ce qui fait tout le charme de cette histoire.",
+            "to": "Où cela s'arrêtera, je ne le sais pas encore. Et c'est peut-être justement ce qui en fait la beauté."
+        },
+        "closing_line": {
+            "from": "Tout héritage commence par un premier chapitre.",
+            "to": "Every legacy begins with a first chapter."
+        },
+        "closing_place": {
+            "from": "Anvers, Belgique · Fondée en 2026",
+            "to": "Anvers, Belgique · Est. 2026"
+        },
+        "ritual_step_1_body": {
+            "from": "Avec attention, même lors d'une matinée comme les autres.",
+            "to": "Avec soin, même un matin ordinaire."
+        },
+        "ritual_step_2_title": {
+            "from": "Café",
+            "to": "Le café"
+        },
+        "ritual_step_2_body": {
+            "from": "Sur une terrasse, alors que la ville s'éveille.",
+            "to": "En terrasse, pendant que la ville s'éveille."
+        },
+        "ritual_step_3_body": {
+            "from": "Faire un petit tour. Regarder, écouter, goûter.",
+            "to": "Une courte promenade. Regarder, écouter, goûter."
+        },
+        "ritual_step_4_body": {
+            "from": "Tenue de sport. Et jouer.",
+            "to": "La tenue de sport. Et jouer."
+        }
+    }
+}

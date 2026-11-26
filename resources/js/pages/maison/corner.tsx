@@ -18,17 +18,17 @@ const PACKAGE_ITEMS = [
     {
         num: '01',
         title: 'Heritage Display',
-        desc: 'A display cabinet in the Maison Anversa style (cream, chocolate and gold) to present Heritage № 001.',
+        desc: 'A display cabinet in the Maison Anversa style (cream, chocolate and gold) to present Heritage Nº 001.',
     },
     {
         num: '02',
         title: 'Demo racket',
-        desc: 'A demo model of Heritage № 001 for members to hold and try. Club Corners present and sell the permanent model. The numbered Founding Edition (Nº 001–100) is available online only and will never be made again.',
+        desc: 'A demo model of Heritage Nº 001 for members to hold and try. Club Corners present and sell the permanent model. The numbered Founding Edition (Nº 001–100) is available online only and will never be made again.',
     },
     {
         num: '03',
         title: 'Heritage brochures',
-        desc: 'Brochures telling the story of Maison Anversa and Heritage № 001, for interested members.',
+        desc: 'Brochures telling the story of Maison Anversa and Heritage Nº 001, for interested members.',
     },
     {
         num: '04',
@@ -158,7 +158,7 @@ export default function Corner({
                             </h2>
                             <p className="mb-5 text-base leading-[1.9] text-choc3">
                                 {t(
-                                    "Club Corner is Maison Anversa's partner programme for padel clubs. Selected clubs across Europe create their own Maison Anversa corner: a carefully designed space where members can discover, hold and buy Heritage № 001.",
+                                    "Club Corner is Maison Anversa's partner programme for padel clubs. Selected clubs across Europe create their own Maison Anversa corner: a carefully designed space where members can discover, hold and buy Heritage Nº 001.",
                                 )}
                             </p>
                             <p className="mb-5 text-base leading-[1.9] text-choc3">
