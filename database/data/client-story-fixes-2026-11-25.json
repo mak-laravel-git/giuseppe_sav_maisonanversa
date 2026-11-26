@@ -99,6 +99,10 @@
         "hero_title": {
             "from": "It all starts with",
             "to": "Everything begins with"
+        },
+        "hero_title_accent": {
+            "from": "a coffee.",
+            "to": "a coffee."
         }
     },
     "fr": {
@@ -135,7 +139,7 @@
             "to": "Pourquoi le style s'arrêterait-il au moment où l'on entre sur le terrain ?"
         },
         "origins_close": {
-            "from": "C'est ainsi qu'est née l'idée de Maison Anversa : un lieu unique où se mêlent sport, style, culture et savoir- faire.",
+            "from": "C'est ainsi qu'est née l'idée de Maison Anversa : un lieu unique où se mêlent sport, style, culture et savoir-faire.",
             "to": "C'est ainsi qu'est née l'idée de Maison Anversa : une seule maison où se rejoignent le sport, le style, la culture et le savoir-faire."
         },
         "name_body": {

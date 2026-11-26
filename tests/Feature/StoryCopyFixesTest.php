@@ -59,11 +59,12 @@ function seedLiveStory(): StoryPage
 test('the data file lists the 25 English and 27 French lines of the client list', function () {
     $fixes = storyFixes();
 
-    // French steps 2 changes title and body, so 27 lines are 28 columns.
-    expect($fixes['en'])->toHaveCount(25)
+    // 25 English lines are 26 columns (the hero title is two columns); French step 2 changes title and body, so 27 lines are 28 columns.
+    expect($fixes['en'])->toHaveCount(26)
         ->and($fixes['fr'])->toHaveCount(28)
         ->and($fixes['fr']['closing_line']['to'])->toBe('Every legacy begins with a first chapter.')
         ->and($fixes['fr']['make_button_label']['to'])->toBe('Découvrir Heritage Nº 001')
+        ->and($fixes['en']['hero_title']['to'].' '.$fixes['en']['hero_title_accent']['to'])->toBe('Everything begins with a coffee.')
         ->and($fixes['en']['closing_place']['to'])->toBe('Antwerp, Belgium · Est. 2026');
 });
 
@@ -105,13 +106,17 @@ test('the rows carry the source hash so DeepL leaves them alone, and a second ru
         ->value('source_hash'))->toBe($page->translationSourceHash('founder_paragraph_one'));
 
     $this->artisan('story:apply-copy-fixes')
-        ->expectsOutputToContain('Updated 0 of 53 lines.')
+        ->expectsOutputToContain('Updated 0 of 54 lines.')
         ->assertSuccessful();
 });
 
 test('the public story pages show the approved wording', function () {
     seedLiveStory();
     $this->artisan('story:apply-copy-fixes')->assertSuccessful();
+
+    // The English page reads the translation rows, not the source column.
+    expect(storyTranslation(StoryPage::current(), 'en', 'ritual_step_1_title'))->toBe('Dressing')
+        ->and(StoryPage::current()->ritual_step_1_title)->not->toBe('Dressing');
 
     $this->get('/en/story')->assertOk()
         ->assertInertia(fn ($page) => $page
