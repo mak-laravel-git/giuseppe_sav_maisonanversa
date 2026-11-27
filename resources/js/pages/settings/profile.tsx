@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import DeleteUser from '@/components/delete-user';
+import DeactivateAccount from '@/components/deactivate-account';
 import { GenderSelect } from '@/components/gender-select';
 import InputError from '@/components/input-error';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -170,7 +170,7 @@ export default function Profile({
                 )}
             </Form>
 
-            <DeleteUser />
+            {!user.is_super_admin && <DeactivateAccount />}
         </>
     );
 }

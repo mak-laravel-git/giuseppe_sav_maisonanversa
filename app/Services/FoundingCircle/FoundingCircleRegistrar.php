@@ -452,7 +452,10 @@ class FoundingCircleRegistrar
         return $piece;
     }
 
-    private function findPiece(Product $product, int $number): ?EditionPiece
+    /**
+     * The racket behind a register number, whichever label format it was stored with.
+     */
+    public function findPiece(Product $product, int $number): ?EditionPiece
     {
         $label = $product->formatEditionLabel($number);
         $digits = $product->formatEditionDigits($number);

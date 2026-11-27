@@ -59,28 +59,28 @@ test('a non super-admin cannot update a super-admin', function () {
     expect($this->superAdmin->fresh()->name)->not->toBe('Hijacked');
 });
 
-test('a non super-admin cannot delete a super-admin', function () {
+test('a non super-admin cannot switch off a super-admin', function () {
     $this->actingAs($this->admin)
-        ->delete(route('admin.admins.destroy', ['user' => $this->superAdmin]))
+        ->patch(route('admin.admins.status', ['user' => $this->superAdmin]), ['active' => false])
         ->assertForbidden();
 
-    expect(User::find($this->superAdmin->id))->not->toBeNull();
+    expect($this->superAdmin->fresh()->isActive())->toBeTrue();
 });
 
-test('a super-admin can delete another super-admin', function () {
+test('a super-admin cannot switch off another super-admin', function () {
     $other = makeSuperAdmin();
 
     $this->actingAs($this->superAdmin)
-        ->delete(route('admin.admins.destroy', ['user' => $other]))
-        ->assertRedirect();
+        ->patch(route('admin.admins.status', ['user' => $other]), ['active' => false])
+        ->assertForbidden();
 
-    expect(User::find($other->id))->toBeNull();
+    expect($other->fresh()->isActive())->toBeTrue();
 });
 
-test('the last super-admin cannot be deleted', function () {
+test('a super-admin cannot switch off their own account', function () {
     $this->actingAs($this->superAdmin)
-        ->delete(route('admin.admins.destroy', ['user' => $this->superAdmin]))
-        ->assertRedirect();
+        ->patch(route('admin.admins.status', ['user' => $this->superAdmin]), ['active' => false])
+        ->assertForbidden();
 
-    expect(User::find($this->superAdmin->id))->not->toBeNull();
+    expect($this->superAdmin->fresh()->isActive())->toBeTrue();
 });

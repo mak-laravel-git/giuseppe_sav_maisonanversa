@@ -6,10 +6,12 @@ use App\Enums\UserGender;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\UpdateLetterPreferencesRequest;
 use App\Http\Requests\Member\UpdateMemberProfileRequest;
+use App\Http\Requests\Settings\ProfileDeactivateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Models\NewsletterSubscriber;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\Auth\AccountStatusService;
 use App\Services\Newsletter\HeritageLetterSubscription;
 use App\Services\Returns\ReturnEligibility;
 use App\Support\MailLocale;
@@ -316,19 +318,16 @@ class DashboardController extends Controller implements HasMiddleware
         return Inertia::render('member/security', $props);
     }
 
-    public function destroy(Request $request, string $locale): RedirectResponse
-    {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
-
+    public function deactivate(
+        ProfileDeactivateRequest $request,
+        AccountStatusService $accounts,
+        string $locale,
+    ): RedirectResponse {
         $user = $request->user();
 
         Auth::logout();
 
-        $this->deleteAvatar($user);
-
-        $user->delete();
+        $accounts->deactivate($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

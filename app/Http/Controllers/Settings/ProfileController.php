@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Settings;
 
 use App\Enums\UserGender;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
+use App\Http\Requests\Settings\ProfileDeactivateRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\Auth\AccountStatusService;
 use App\Support\PersonName;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -66,17 +67,18 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's profile.
+     * Switch off the user's own account and sign them out. Data is kept.
      */
-    public function destroy(ProfileDeleteRequest $request, string $locale): RedirectResponse
-    {
+    public function deactivate(
+        ProfileDeactivateRequest $request,
+        AccountStatusService $accounts,
+        string $locale,
+    ): RedirectResponse {
         $user = $request->user();
 
         Auth::logout();
 
-        $this->deleteAvatar($user);
-
-        $user->delete();
+        $accounts->deactivate($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

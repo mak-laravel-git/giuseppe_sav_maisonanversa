@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\RoleEnum;
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateAccountStatusRequest;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Services\Auth\AccountStatusService;
 use App\Support\SuperAdmin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,7 +41,6 @@ class UserController extends Controller
             'filters' => [
                 'search' => $search,
             ],
-            'superAdminCount' => SuperAdmin::count(),
             'stats' => Inertia::optional(fn (): array => [
                 'total' => User::query()->where('type', UserType::Admin)->count(),
                 'verified' => User::query()
@@ -123,24 +124,23 @@ class UserController extends Controller
         return redirect()->route('admin.admins.index');
     }
 
-    public function destroy(string $locale, User $user): RedirectResponse
-    {
+    public function updateStatus(
+        UpdateAccountStatusRequest $request,
+        AccountStatusService $accounts,
+        string $locale,
+        User $user,
+    ): RedirectResponse {
         $this->ensureAdmin($user);
-        $this->authorize('delete', $user);
 
-        if (SuperAdmin::isLast($user)) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => __('The last super administrator account cannot be deleted.'),
-            ]);
-
-            return redirect()->back();
+        if ($request->boolean('active')) {
+            $accounts->activate($user);
+            $message = __('Account activated.');
+        } else {
+            $accounts->deactivate($user);
+            $message = __('Account deactivated.');
         }
 
-        $this->deleteAvatar($user);
-        $user->delete();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Administrator deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return redirect()->back();
     }

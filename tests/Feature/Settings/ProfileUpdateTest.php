@@ -94,12 +94,12 @@ test('profile avatar can be uploaded and removed', function () {
     expect($user->fresh()->avatar)->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('user can deactivate their account and it is not deleted', function () {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
-        ->delete(localized('profile.destroy'), [
+        ->post(localized('profile.deactivate'), [
             'password' => 'password',
         ]);
 
@@ -108,16 +108,16 @@ test('user can delete their account', function () {
         ->assertRedirect(route('home'));
 
     $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+    expect($user->fresh()?->isActive())->toBeFalse();
 });
 
-test('correct password must be provided to delete account', function () {
+test('correct password must be provided to deactivate account', function () {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->from(localized('profile.edit'))
-        ->delete(localized('profile.destroy'), [
+        ->post(localized('profile.deactivate'), [
             'password' => 'wrong-password',
         ]);
 
@@ -125,5 +125,5 @@ test('correct password must be provided to delete account', function () {
         ->assertSessionHasErrors('password')
         ->assertRedirect(localized('profile.edit', absolute: false));
 
-    expect($user->fresh())->not->toBeNull();
+    expect($user->fresh()->isActive())->toBeTrue();
 });

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
@@ -70,11 +71,18 @@ class FortifyServiceProvider extends ServiceProvider
                 ->orWhere('username', $login)
                 ->first();
 
-            if ($user && Hash::check((string) $request->password, $user->password)) {
-                return $user;
+            if (! $user || ! Hash::check((string) $request->password, $user->password)) {
+                return null;
             }
 
-            return null;
+            // Only said after a correct password, so it reveals nothing to a stranger.
+            if (! $user->isActive()) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('This account is inactive. Please contact Maison Anversa.'),
+                ]);
+            }
+
+            return $user;
         });
     }
 

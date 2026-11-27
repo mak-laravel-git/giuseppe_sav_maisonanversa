@@ -16,12 +16,4 @@ class UserPolicy
     {
         return ! $target->isSuperAdmin() || $actor->isSuperAdmin();
     }
-
-    /**
-     * Only a super-admin may delete a super-admin account.
-     */
-    public function delete(User $actor, User $target): bool
-    {
-        return ! $target->isSuperAdmin() || $actor->isSuperAdmin();
-    }
 }

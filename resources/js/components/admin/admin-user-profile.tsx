@@ -47,6 +47,11 @@ export function AdminUserProfile({ user, idLabel }: AdminUserProfileProps) {
                                     ? t('Verified')
                                     : t('Pending')}
                             </Badge>
+                            {user.deactivated_at !== null && (
+                                <Badge variant="destructive">
+                                    {t('Inactive')}
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 </div>

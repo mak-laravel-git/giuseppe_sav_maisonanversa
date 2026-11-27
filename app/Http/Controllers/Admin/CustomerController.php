@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\RoleEnum;
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateAccountStatusRequest;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Services\Auth\AccountStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -163,15 +165,23 @@ class CustomerController extends Controller
         return redirect()->route('admin.customers.index');
     }
 
-    public function destroy(string $locale, User $user): RedirectResponse
-    {
+    public function updateStatus(
+        UpdateAccountStatusRequest $request,
+        AccountStatusService $accounts,
+        string $locale,
+        User $user,
+    ): RedirectResponse {
         $this->ensureCustomer($user);
-        $this->authorize('delete', $user);
 
-        $this->deleteAvatar($user);
-        $user->delete();
+        if ($request->boolean('active')) {
+            $accounts->activate($user);
+            $message = __('Account activated.');
+        } else {
+            $accounts->deactivate($user);
+            $message = __('Account deactivated.');
+        }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Customer deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return redirect()->back();
     }

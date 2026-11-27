@@ -6,7 +6,6 @@ import {
     Pencil,
     Plus,
     Search,
-    Trash2,
     UserCheck,
     Users,
     UsersRound,
@@ -14,9 +13,10 @@ import {
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AccountStatusAction } from '@/components/admin/account-status-action';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
-import { ConfirmDeleteDialog } from '@/components/admin/confirm-delete-dialog';
 import { DataPagination } from '@/components/admin/data-pagination';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -184,9 +184,16 @@ export default function CustomersIndex({
                                                 </div>
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
-                                                {customer.email_verified_at
-                                                    ? t('Verified')
-                                                    : t('Pending')}
+                                                {customer.deactivated_at !==
+                                                null ? (
+                                                    <Badge variant="destructive">
+                                                        {t('Inactive')}
+                                                    </Badge>
+                                                ) : customer.email_verified_at ? (
+                                                    t('Verified')
+                                                ) : (
+                                                    t('Pending')
+                                                )}
                                             </TableCell>
                                             <TableCell className="hidden lg:table-cell">
                                                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -244,40 +251,15 @@ export default function CustomersIndex({
                                                             </Link>
                                                         </Button>
                                                     )}
-                                                    {can(
-                                                        PERMISSIONS.USERS
-                                                            .DELETE,
-                                                    ) && (
-                                                        <ConfirmDeleteDialog
-                                                            description={t(
-                                                                'Permanently delete {{name}} and all associated data?',
-                                                                {
-                                                                    name: customer.name,
-                                                                },
-                                                            )}
-                                                            onConfirm={() =>
-                                                                router.delete(
-                                                                    customers.destroy(
-                                                                        {
-                                                                            locale: wayfinderLocale(),
-                                                                            user: customer.id,
-                                                                        },
-                                                                    ).url,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="text-muted-foreground hover:text-destructive"
-                                                                title={t(
-                                                                    'Verwijderen',
-                                                                )}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </ConfirmDeleteDialog>
-                                                    )}
+                                                    <AccountStatusAction
+                                                        user={customer}
+                                                        statusUrl={
+                                                            customers.status({
+                                                                locale: wayfinderLocale(),
+                                                                user: customer.id,
+                                                            }).url
+                                                        }
+                                                    />
                                                 </div>
                                             </TableCell>
                                         </TableRow>

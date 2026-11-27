@@ -2,7 +2,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    destroy,
+    deactivate,
     updateProfile,
 } from '@/actions/App/Http/Controllers/Member/DashboardController';
 import { GenderSelect } from '@/components/gender-select';
@@ -249,7 +249,7 @@ export default function MemberProfile({
                 )}
             </Form>
 
-            <DeleteMemberAccount locale={locale} />
+            <DeactivateMemberAccount locale={locale} />
         </>
     );
 }
@@ -427,7 +427,7 @@ function MatchCardNameField({
     );
 }
 
-function DeleteMemberAccount({ locale }: { locale: string }) {
+function DeactivateMemberAccount({ locale }: { locale: string }) {
     const { t } = useTranslation();
     const [confirming, setConfirming] = useState(false);
 
@@ -439,9 +439,9 @@ function DeleteMemberAccount({ locale }: { locale: string }) {
             )}
         >
             <MemberSectionTitle
-                title={t('Delete account')}
+                title={t('Deactivate account')}
                 description={t(
-                    'Permanently remove your account and data from Maison Anversa. This cannot be undone.',
+                    'You are signed out and cannot sign in again. Your orders and data are kept. Contact Maison Anversa to reactivate your account.',
                 )}
             />
 
@@ -452,10 +452,13 @@ function DeleteMemberAccount({ locale }: { locale: string }) {
                     className="rounded-none"
                     onClick={() => setConfirming(true)}
                 >
-                    {t('Delete account')}
+                    {t('Deactivate account')}
                 </Button>
             ) : (
-                <Form {...destroy.form(locale)} className="max-w-md space-y-4">
+                <Form
+                    {...deactivate.form(locale)}
+                    className="max-w-md space-y-4"
+                >
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
@@ -489,7 +492,7 @@ function DeleteMemberAccount({ locale }: { locale: string }) {
                                     className="rounded-none"
                                     disabled={processing}
                                 >
-                                    {t('Confirm delete')}
+                                    {t('Confirm deactivation')}
                                 </Button>
                             </div>
                         </>

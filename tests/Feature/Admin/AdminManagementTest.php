@@ -98,14 +98,14 @@ test('an administrator can be updated without role payloads', function () {
         ->and($user->hasRole(RoleEnum::ADMIN->value))->toBeTrue();
 });
 
-test('an administrator can be deleted', function () {
+test('an administrator cannot be deleted, not even by a super admin', function () {
     $user = User::factory()->admin()->create();
     $user->assignRole(RoleEnum::ADMIN->value);
     $user->syncTypeFromRoles();
 
     $this->actingAs($this->admin)
-        ->delete(route('admin.admins.destroy', ['user' => $user]))
-        ->assertRedirect();
+        ->delete(route('admin.admins.show', ['user' => $user]))
+        ->assertMethodNotAllowed();
 
-    expect(User::find($user->id))->toBeNull();
+    $this->assertModelExists($user);
 });

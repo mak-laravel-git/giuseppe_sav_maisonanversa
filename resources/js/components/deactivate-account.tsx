@@ -17,7 +17,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { wayfinderLocale } from '@/lib/wayfinder-defaults';
 
-export default function DeleteUser() {
+export default function DeactivateAccount() {
     const { t } = useTranslation();
     const passwordInput = useRef<HTMLInputElement>(null);
 
@@ -25,48 +25,39 @@ export default function DeleteUser() {
         <section className="rounded-lg border border-destructive/35 bg-destructive/10 p-5 sm:p-6">
             <header className="mb-4 space-y-1">
                 <h2 className="text-base font-medium tracking-tight text-foreground">
-                    {t('Delete account')}
+                    {t('Deactivate account')}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                     {t(
-                        'Permanently delete your account and all of its resources. This cannot be undone.',
+                        'You are signed out and cannot sign in again. Your orders and data are kept. Contact Maison Anversa to reactivate your account.',
                     )}
                 </p>
             </header>
-
-            <div className="rounded-md border border-destructive/30 bg-background/40 px-4 py-3 text-sm">
-                <p className="font-medium text-destructive">
-                    {t('Warning')}
-                </p>
-                <p className="mt-0.5 text-muted-foreground">
-                    {t('Please proceed with caution — this action is permanent.')}
-                </p>
-            </div>
 
             <div className="mt-4">
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button
                             variant="destructive"
-                            data-test="delete-user-button"
+                            data-test="deactivate-account-button"
                         >
-                            {t('Delete account')}
+                            {t('Deactivate account')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogTitle>
                             {t(
-                                'Are you sure you want to delete your account?',
+                                'Are you sure you want to deactivate your account?',
                             )}
                         </DialogTitle>
                         <DialogDescription>
                             {t(
-                                'Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.',
+                                'Enter your password to confirm that you want to deactivate your account.',
                             )}
                         </DialogDescription>
 
                         <Form
-                            {...ProfileController.destroy.form(
+                            {...ProfileController.deactivate.form(
                                 wayfinderLocale(),
                             )}
                             options={{
@@ -116,9 +107,9 @@ export default function DeleteUser() {
                                         >
                                             <button
                                                 type="submit"
-                                                data-test="confirm-delete-user-button"
+                                                data-test="confirm-deactivate-account-button"
                                             >
-                                                {t('Delete account')}
+                                                {t('Deactivate account')}
                                             </button>
                                         </Button>
                                     </DialogFooter>

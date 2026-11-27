@@ -6,7 +6,6 @@ import {
     Pencil,
     Plus,
     Search,
-    Trash2,
     UserCheck,
     UserRoundCog,
     UsersRound,
@@ -14,9 +13,10 @@ import {
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AccountStatusAction } from '@/components/admin/account-status-action';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
-import { ConfirmDeleteDialog } from '@/components/admin/confirm-delete-dialog';
 import { DataPagination } from '@/components/admin/data-pagination';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,14 +39,12 @@ import { PERMISSIONS } from '@/types/permissions';
 interface AdminsIndexProps {
     users: Paginated<AdminUser>;
     filters: { search: string };
-    superAdminCount: number;
     stats?: { total: number; verified: number };
 }
 
 export default function AdminsIndex({
     users: paginated,
     filters,
-    superAdminCount,
     stats,
 }: AdminsIndexProps) {
     const { t } = useTranslation();
@@ -160,12 +158,6 @@ export default function AdminsIndex({
                                         (role) =>
                                             role.name === SUPER_ADMIN_ROLE,
                                     );
-                                    const isLastSuperAdmin =
-                                        isSuperAdmin && superAdminCount <= 1;
-                                    const canDelete =
-                                        can(PERMISSIONS.USERS.DELETE) &&
-                                        (!isSuperAdmin || actorIsSuperAdmin) &&
-                                        !isLastSuperAdmin;
 
                                     return (
                                         <TableRow key={user.id}>
@@ -196,9 +188,16 @@ export default function AdminsIndex({
                                                 </div>
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
-                                                {user.email_verified_at
-                                                    ? t('Verified')
-                                                    : t('Pending')}
+                                                {user.deactivated_at !==
+                                                null ? (
+                                                    <Badge variant="destructive">
+                                                        {t('Inactive')}
+                                                    </Badge>
+                                                ) : user.email_verified_at ? (
+                                                    t('Verified')
+                                                ) : (
+                                                    t('Pending')
+                                                )}
                                             </TableCell>
                                             <TableCell className="hidden lg:table-cell">
                                                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -258,37 +257,15 @@ export default function AdminsIndex({
                                                                 </Link>
                                                             </Button>
                                                         )}
-                                                    {canDelete && (
-                                                        <ConfirmDeleteDialog
-                                                            description={t(
-                                                                'Permanently delete {{name}}?',
-                                                                {
-                                                                    name: user.name,
-                                                                },
-                                                            )}
-                                                            onConfirm={() =>
-                                                                router.delete(
-                                                                    admins.destroy(
-                                                                        {
-                                                                            locale: wayfinderLocale(),
-                                                                            user: user.id,
-                                                                        },
-                                                                    ).url,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="text-muted-foreground hover:text-destructive"
-                                                                title={t(
-                                                                    'Verwijderen',
-                                                                )}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </ConfirmDeleteDialog>
-                                                    )}
+                                                    <AccountStatusAction
+                                                        user={user}
+                                                        statusUrl={
+                                                            admins.status({
+                                                                locale: wayfinderLocale(),
+                                                                user: user.id,
+                                                            }).url
+                                                        }
+                                                    />
                                                 </div>
                                             </TableCell>
                                         </TableRow>

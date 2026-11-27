@@ -304,7 +304,7 @@ Route::prefix('{locale}')
                 Route::get('profile', 'profile')->name('profile');
                 Route::patch('profile', 'updateProfile')->name('profile.update');
                 Route::get('security', 'security')->name('security');
-                Route::delete('profile', 'destroy')->name('profile.destroy');
+                Route::post('profile/deactivate', 'deactivate')->name('profile.deactivate');
                 Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
                 Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
                 Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])
@@ -406,8 +406,9 @@ Route::prefix('{locale}')
                     ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
                 Route::put('customers/{user}', 'update')->name('customers.update')
                     ->middleware(['permission:'.PermissionEnum::USERS_EDIT->value, HandlePrecognitiveRequests::class]);
-                Route::delete('customers/{user}', 'destroy')->name('customers.destroy')
-                    ->middleware('permission:'.PermissionEnum::USERS_DELETE->value);
+                // Accounts are never deleted here; a super-admin switches them off.
+                Route::patch('customers/{user}/status', 'updateStatus')->name('customers.status')
+                    ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
             });
 
             Route::controller(OpsController::class)->group(function () {
@@ -773,8 +774,9 @@ Route::prefix('{locale}')
                     ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
                 Route::put('admins/{user}', 'update')->name('admins.update')
                     ->middleware(['permission:'.PermissionEnum::USERS_EDIT->value, HandlePrecognitiveRequests::class]);
-                Route::delete('admins/{user}', 'destroy')->name('admins.destroy')
-                    ->middleware('permission:'.PermissionEnum::USERS_DELETE->value);
+                // Accounts are never deleted here; a super-admin switches them off.
+                Route::patch('admins/{user}/status', 'updateStatus')->name('admins.status')
+                    ->middleware('permission:'.PermissionEnum::USERS_EDIT->value);
             });
 
             Route::controller(RoleController::class)->group(function () {
@@ -840,7 +842,7 @@ Route::prefix('{locale}')
             Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
         });
 
-        Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::post('settings/profile/deactivate', [ProfileController::class, 'deactivate'])->name('profile.deactivate');
         Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
         Route::put('settings/password', [SecurityController::class, 'update'])
             ->middleware('throttle:6,1')

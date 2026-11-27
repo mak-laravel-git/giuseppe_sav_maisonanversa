@@ -94,12 +94,12 @@ test('a customer can be updated', function () {
         ->and($customer->hasRole(RoleEnum::USER->value))->toBeTrue();
 });
 
-test('a customer can be deleted', function () {
+test('a customer cannot be deleted, not even by a super admin', function () {
     $customer = User::factory()->customer()->create();
 
     $this->actingAs($this->admin)
-        ->delete(route('admin.customers.destroy', ['user' => $customer]))
-        ->assertRedirect();
+        ->delete(route('admin.customers.show', ['user' => $customer]))
+        ->assertMethodNotAllowed();
 
-    expect(User::find($customer->id))->toBeNull();
+    $this->assertModelExists($customer);
 });

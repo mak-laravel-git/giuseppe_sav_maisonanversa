@@ -36,6 +36,7 @@ export interface AdminUser {
     email: string;
     avatar: string | null;
     email_verified_at: string | null;
+    deactivated_at: string | null;
     created_at: string;
     roles: RoleRef[];
 }

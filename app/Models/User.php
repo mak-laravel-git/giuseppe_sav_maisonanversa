@@ -60,6 +60,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole(RoleEnum::FOUNDING_CIRCLE->value);
     }
 
+    /**
+     * Inactive accounts keep their data but cannot sign in.
+     */
+    public function isActive(): bool
+    {
+        return $this->deactivated_at === null;
+    }
+
     public function seesEarlyAccess(): bool
     {
         return $this->isFoundingCircle() || $this->isAdmin();
@@ -146,6 +154,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'deactivated_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'marketing_consent_at' => 'datetime',
             'session_emails' => 'boolean',

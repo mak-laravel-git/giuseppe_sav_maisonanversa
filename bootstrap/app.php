@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AddSecurityHeaders;
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureFoundingCircle;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsCustomer;
@@ -46,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             HandleInertiaRequests::class,
+            EnsureAccountIsActive::class,
             AddLinkHeadersForPreloadedAssets::class,
             AddSecurityHeaders::class,
         ]);
